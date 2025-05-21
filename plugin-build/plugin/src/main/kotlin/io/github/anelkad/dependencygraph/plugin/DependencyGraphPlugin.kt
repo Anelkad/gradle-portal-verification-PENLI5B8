@@ -18,7 +18,7 @@ abstract class DependencyGraphPlugin : Plugin<Project> {
         )
 
         // Add a task that uses configuration from the extension object
-        project.tasks.register(TASK_NAME, DependencyGraphTask::class.java) {
+        project.tasks.register(GRAPH_TASK_NAME, DependencyGraphTask::class.java) {
             it.graphFileName.set(extension.graphFileName)
             it.mainBranchName.set(extension.mainBranchName)
             it.repoRootUrl.set(extension.repoRootUrl)
@@ -34,10 +34,27 @@ abstract class DependencyGraphPlugin : Plugin<Project> {
                 ),
             )
         }
+
+        // Add a task that uses configuration from the extension object
+        project.tasks.register(METRICS_TASK_NAME, DependencyMetricsTask::class.java) {
+            it.graphFileName.set(extension.graphFileName)
+            it.mainBranchName.set(extension.mainBranchName)
+            it.repoRootUrl.set(extension.repoRootUrl)
+            it.shouldLinkModuleText.set(extension.shouldLinkModuleText)
+            it.shouldGroupModules.set(extension.shouldGroupModules)
+
+            it.parsedGraph.set(
+                parseDependencyGraph(
+                    rootProject = project.rootProject,
+                    ignoredModules = extension.ignoreModules.orNull ?: emptyList(),
+                ),
+            )
+        }
     }
 
     companion object {
         private const val EXTENSION_NAME = "dependencyGraphConfig"
-        private const val TASK_NAME = "dependencyGraph"
+        private const val GRAPH_TASK_NAME = "dependencyGraph"
+        private const val METRICS_TASK_NAME = "dependencyMetrics"
     }
 }

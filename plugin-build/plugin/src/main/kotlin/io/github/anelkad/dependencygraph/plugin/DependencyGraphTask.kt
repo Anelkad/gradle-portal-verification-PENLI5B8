@@ -9,7 +9,6 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
-import java.io.File
 
 /**
  * Enum to provide the direction in which the graph should flow.
@@ -180,15 +179,15 @@ abstract class DependencyGraphTask : DefaultTask() {
         val shouldLinkModuleText = shouldLinkModuleText.getOrElse(true)
         val shouldGroupModules = shouldGroupModules.getOrElse(false)
 
-        val resultOfModulesDependents: MutableMap<String, Int> = mutableMapOf()
-        var resultText = ""
+//        val resultOfModulesDependents: MutableMap<String, Int> = mutableMapOf()
+//        var resultText = ""
         // Draw sub graph of dependencies and dependents for each module
         graph.projects.forEach {
             drawDependencyGraph(
                 currentProject = it,
                 parsedGraph = graph,
                 isRootGraph = false,
-                resultOfModulesDependents = resultOfModulesDependents,
+//                resultOfModulesDependents = resultOfModulesDependents,
                 config = DrawConfig(
                     rootDir = graph.rootProject.projectDir,
                     moduleBaseUrl = moduleBaseUrl,
@@ -201,13 +200,13 @@ abstract class DependencyGraphTask : DefaultTask() {
             )
         }
 
-        resultOfModulesDependents.entries.sortedByDescending { it.value }.forEach {
-            resultText += "${it.key} - ${it.value}\n"
-        }
-        val graphFile = File(graph.rootProject.projectDir, "sorted_projects_dependents_count_list.txt")
-        graphFile.parentFile.mkdirs()
-        graphFile.delete()
-        graphFile.writeText(resultText)
+//        resultOfModulesDependents.entries.sortedByDescending { it.value }.forEach {
+//            resultText += "${it.key} - ${it.value}\n"
+//        }
+//        val graphFile = File(graph.rootProject.projectDir, "sorted_projects_dependents_count_list.txt")
+//        graphFile.parentFile.mkdirs()
+//        graphFile.delete()
+//        graphFile.writeText(resultText)
 
         // Draw the full graph of all modules
         drawDependencyGraph(
