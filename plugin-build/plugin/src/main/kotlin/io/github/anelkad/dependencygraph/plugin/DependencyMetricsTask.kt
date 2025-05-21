@@ -89,11 +89,37 @@ abstract class DependencyMetricsTask : DefaultTask() {
             graph = graph,
             resultOfModulesDependencies = resultOfModulesDependencies
         )
+        printModuleCentrality(
+            graph = graph,
+            resultOfModulesDependents = resultOfModulesDependents,
+            resultOfModulesDependencies = resultOfModulesDependencies
+        )
+    }
 
+    private fun printModuleCentrality(
+        graph: ParsedGraph,
+        resultOfModulesDependents: MutableMap<String, Int>,
+        resultOfModulesDependencies: MutableMap<String, Int>
+    ) {
         val resultOfModulesCentrality: MutableList<Triple<String, Int, Int>> = mutableListOf()
 
         val modules = mutableSetOf<String>()
-        modules.addAll(resultOfModulesDependencies.keys + resultOfModulesDependents.keys)
+        modules.addAll(
+            resultOfModulesDependencies.entries
+                .sortedByDescending { it.value }
+                .take(150)
+                .map {
+                    it.key
+                }
+        )
+        modules.addAll(
+            resultOfModulesDependents.entries
+                .sortedByDescending { it.value }
+                .take(150)
+                .map {
+                    it.key
+                }
+        )
 
         var resultCentralityText = ""
         modules.forEach {
@@ -105,7 +131,7 @@ abstract class DependencyMetricsTask : DefaultTask() {
                 )
             )
         }
-        resultOfModulesCentrality.sortedByDescending { it.second + it.third }.forEach {
+        resultOfModulesCentrality.sortedByDescending { it.third }.forEach {
             resultCentralityText += "${it.first} | dependencies - ${it.second} | dependents - ${it.third}\n"
         }
         val file = File(graph.rootProject.projectDir, "sorted_projects_centrality.txt")
