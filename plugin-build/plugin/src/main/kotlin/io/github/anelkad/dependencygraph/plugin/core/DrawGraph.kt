@@ -30,8 +30,7 @@ internal fun drawDependencyGraph(
     currentProject: ModuleProject,
     parsedGraph: ParsedGraph,
     isRootGraph: Boolean,
-    config: DrawConfig,
-//    resultOfModulesDependents: MutableMap<String, Int> = mutableMapOf()
+    config: DrawConfig
 ) {
     val projects: LinkedHashSet<ModuleProject> = parsedGraph.projects
     val dependencies: LinkedHashMap<DependencyPair, List<String>> =
@@ -137,8 +136,6 @@ internal fun drawDependencyGraph(
 
         """.trimIndent()
 
-//    val dependentModulesSet: MutableSet<String> = mutableSetOf()
-
     dependencies
         .filter { (key, _) ->
             val (origin, target) = key
@@ -148,7 +145,6 @@ internal fun drawDependencyGraph(
         }
         .forEach { (key, traits) ->
             val (origin, target) = key
-//            dependentModulesSet.add(origin.path)
             // bold dashed arrows aren't supported
             val isApi = traits.isNotEmpty() && traits[0] == "api"
             val arrow = if (isApi) {
@@ -165,10 +161,6 @@ internal fun drawDependencyGraph(
     graphFile.parentFile.mkdirs()
     graphFile.delete()
     graphFile.writeText(fileText)
-
-//    if (dependentModulesSet.isNotEmpty()) {
-//        resultOfModulesDependents[currentProject.path] = dependentModulesSet.size
-//    }
 
     println("Project module dependency graph created at ${graphFile.absolutePath}")
 }
