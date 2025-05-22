@@ -96,12 +96,15 @@ private fun isContainsAndroidImports(
                 file.forEachLine { line ->
                     val match = importRegex.find(line)
                     val import = match?.groupValues?.get(1)
-                    if (
-                        import != null
-                        && (import.contains("android") || import.contains("androidx"))
-                        && !ignoredExternalDependencies.any { import.contains(it) }
+                    if (import != null && !ignoredExternalDependencies
+                            .map { it.split(".").lastOrNull() ?: "qwerty" }
+                            .any { import.contains(it) }
                     ) {
-                        androidImports.add(import)
+                        if (import.contains("android") || import.contains("androidx"))
+                         {
+                            println(currentProject.path + " " + import)
+                            androidImports.add(import)
+                        }
                     }
                 }
             }
