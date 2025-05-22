@@ -56,6 +56,7 @@ abstract class DependencyGraphPlugin : Plugin<Project> {
                 parseDependencyGraph(
                     rootProject = project.rootProject,
                     ignoredModules = extension.ignoreModules.orNull ?: emptyList(),
+                    ignoredExternalDependencies = extension.ignoreExternalDependencies.orNull ?: emptyList()
                 )
             )
         }

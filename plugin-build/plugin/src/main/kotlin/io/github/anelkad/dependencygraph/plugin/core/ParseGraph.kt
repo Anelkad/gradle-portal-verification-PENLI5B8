@@ -17,6 +17,7 @@ import java.util.*
 internal fun parseDependencyGraph(
     rootProject: Project,
     ignoredModules: List<String>,
+    ignoredExternalDependencies: List<String> = emptyList()
 ): ParsedGraph {
     val rootProjects = mutableListOf<Project>()
     var queue = mutableListOf(rootProject)
@@ -105,6 +106,9 @@ internal fun parseDependencyGraph(
                 .forEach {
                     it.dependencies
                         .filterIsInstance<ExternalDependency>()
+                        .filter {
+                            it.group !in ignoredExternalDependencies
+                        }
                         .forEach { dependency ->
                             val graphKey = ExternalDependencyPair(
                                 project.asModuleProject(),
