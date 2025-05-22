@@ -1,6 +1,3 @@
-import io.github.anelkad.dependencygraph.plugin.Direction
-import io.github.anelkad.dependencygraph.plugin.ShowLegend
-
 plugins {
     id("io.github.anelkad.dependencygraph")
 }

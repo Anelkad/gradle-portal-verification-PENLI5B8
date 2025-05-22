@@ -100,7 +100,6 @@ abstract class CheckKotlinModuleTask : DefaultTask() {
                         val match = importRegex.find(line)
                         val import = match?.groupValues?.get(1)
                         if (import != null && (import.contains("android") || import.contains("androidx"))) {
-                            println(currentProject.path +" "+import)
                             androidImports.add(import)
                         }
                     }
