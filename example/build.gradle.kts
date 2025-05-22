@@ -24,7 +24,7 @@ dependencyGraphConfig {
     // Optional
     ignoreModules.set(listOf(":example:system-test"))
 
-    ignoreExternalDependencies.set(listOf("androidx.appcompat"))
+//    ignoreExternalDependencies.set(listOf("androidx.appcompat"))
 
     // Optional
     shouldLinkModuleText.set(true)

@@ -53,6 +53,7 @@ abstract class CheckKotlinModuleTask : DefaultTask() {
         val currentProjectDependencies =
             gatherDependencies(mutableListOf(currentProject), dependencies)
 
+        currentProjectDependencies.remove(currentProject)
         if (
             currentProjectDependencies.all {
                 it !in androidProjects
