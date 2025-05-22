@@ -14,15 +14,15 @@ subgraph
 
   subgraph example
     direction LR;
-    :example:data[<a href='https://github.com/anelkad/Gradle-dependency-graphs/blob/main/example/data/dependencyGraph.md' style='text-decoration:auto'>:example:data</a>]:::javaNode;
-    :example:domain{{<a href='https://github.com/anelkad/Gradle-dependency-graphs/blob/main/example/domain/dependencyGraph.md' style='text-decoration:auto'>:example:domain</a>}}:::javaNode;
     :example:models{{<a href='https://github.com/anelkad/Gradle-dependency-graphs/blob/main/example/models/dependencyGraph.md' style='text-decoration:auto'>:example:models</a>}}:::javaNode;
+    :example:mylibrary[<a href='https://github.com/anelkad/Gradle-dependency-graphs/blob/main/example/mylibrary/dependencyGraph.md' style='text-decoration:auto'>:example:mylibrary</a>]:::andNode;
+    :example:mylibrary2([<a href='https://github.com/anelkad/Gradle-dependency-graphs/blob/main/example/mylibrary2/dependencyGraph.md' style='text-decoration:auto'>:example:mylibrary2</a>]):::andNode;
   end
 end
 
 %% Dependencies
-:example:data===>:example:models
+:example:mylibrary===>:example:models
 
 %% Dependents
-:example:domain-.->:example:data
+:example:mylibrary2-.->:example:mylibrary
 ```
