@@ -69,10 +69,44 @@ abstract class CheckKotlinModuleTask : DefaultTask() {
             ) {
                 val resDir = File(currentProject.projectDir, "src/main/res")
                 if (!resDir.exists() || resDir.listFiles()?.isEmpty() != false) {
-                    throw GradleException("${currentProject.path} not contains android dependencies, make it kotlin module!")
+                    if (!isContainsAndroidImports(currentProject)) {
+                        throw GradleException("${currentProject.path} not contains android dependencies, make it kotlin module!")
+                    }
                 }
             }
         }
+    }
+
+    private fun isContainsAndroidImports(
+        currentProject: ModuleProject
+    ): Boolean {
+        val srcDirs = listOf(
+            "src/main/java",
+            "src/main/kotlin",
+            "src/gms/kotlin",
+            "src/gms/java",
+            "src/hms/kotlin",
+            "src/hms/java"
+        ).map { File(currentProject.projectDir, it) }.filter { it.exists() }
+
+        val importRegex = Regex("""^\s*import\s+([a-zA-Z0-9_.]+)""")
+        val androidImports = mutableSetOf<String>()
+
+        srcDirs.forEach { srcDir ->
+            srcDir.walkTopDown()
+                .filter { it.isFile && (it.extension == "kt" || it.extension == "java") }
+                .forEach { file ->
+                    file.forEachLine { line ->
+                        val match = importRegex.find(line)
+                        val import = match?.groupValues?.get(1)
+                        if (import != null && (import.contains("android") || import.contains("androidx"))) {
+                            println(currentProject.path +" "+import)
+                            androidImports.add(import)
+                        }
+                    }
+                }
+        }
+        return androidImports.isNotEmpty()
     }
 
     private fun gatherDependencies(
