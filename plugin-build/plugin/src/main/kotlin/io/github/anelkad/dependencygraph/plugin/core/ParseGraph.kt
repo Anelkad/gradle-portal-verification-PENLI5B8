@@ -1,9 +1,11 @@
 package io.github.anelkad.dependencygraph.plugin.core
 
 import io.github.anelkad.dependencygraph.plugin.DependencyPair
+import io.github.anelkad.dependencygraph.plugin.ExternalDependencyPair
 import io.github.anelkad.dependencygraph.plugin.ParsedGraph
 import io.github.anelkad.dependencygraph.plugin.asModuleProject
 import org.gradle.api.Project
+import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ProjectDependency
 import java.util.*
 
@@ -31,6 +33,7 @@ internal fun parseDependencyGraph(
 
     val projects = LinkedHashSet<Project>()
     val dependencies = LinkedHashMap<DependencyPair, List<String>>()
+    val externalDependencies = LinkedHashMap<ExternalDependencyPair, List<String>>()
     val multiplatformProjects = mutableListOf<Project>()
     val androidProjects = mutableListOf<Project>()
     val javaProjects = mutableListOf<Project>()
@@ -92,6 +95,27 @@ internal fun parseDependencyGraph(
                     }
                 }
         }
+
+        projects.forEach { project ->
+            project.configurations
+                .filter {
+                    it.name == "implementation" ||
+                        it.name == "api"
+                }
+                .forEach {
+                    it.dependencies
+                        .filterIsInstance<ExternalDependency>()
+                        .forEach { dependency ->
+                            val graphKey = ExternalDependencyPair(
+                                project.asModuleProject(),
+                                dependency.group + ":" + dependency.name,
+                            )
+                            val traits = externalDependencies
+                                .getOrPut(graphKey) { mutableListOf() } as MutableList
+                            traits.add(dependency.group + ":" + dependency.name)
+                        }
+                }
+        }
     }
 
     // Collect leaf projects which may be denoted with a different shape or rank
@@ -116,6 +140,7 @@ internal fun parseDependencyGraph(
     return ParsedGraph(
         projects = LinkedHashSet(projects.map { it.asModuleProject() }.sortedBy { it.path }),
         dependencies = dependencies,
+        externalDependencies = externalDependencies,
         multiplatformProjects = multiplatformProjects.map { it.asModuleProject() },
         androidProjects = androidProjects.map { it.asModuleProject() },
         javaProjects = javaProjects.map { it.asModuleProject() },

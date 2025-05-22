@@ -50,11 +50,21 @@ abstract class DependencyGraphPlugin : Plugin<Project> {
                 ),
             )
         }
+
+        project.tasks.register(CHECK_KOTLIN_MODULE, CheckKotlinModuleTask::class.java) {
+            it.parsedGraph.set(
+                parseDependencyGraph(
+                    rootProject = project.rootProject,
+                    ignoredModules = extension.ignoreModules.orNull ?: emptyList(),
+                )
+            )
+        }
     }
 
     companion object {
         private const val EXTENSION_NAME = "dependencyGraphConfig"
         private const val GRAPH_TASK_NAME = "dependencyGraph"
         private const val METRICS_TASK_NAME = "dependencyMetrics"
+        private const val CHECK_KOTLIN_MODULE = "checkKotlinModule"
     }
 }

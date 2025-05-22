@@ -6,6 +6,7 @@ import java.io.File
 internal data class ParsedGraph(
     val projects: LinkedHashSet<ModuleProject>,
     val dependencies: LinkedHashMap<DependencyPair, List<String>>,
+    val externalDependencies: LinkedHashMap<ExternalDependencyPair, List<String>> = linkedMapOf(),
     val multiplatformProjects: List<ModuleProject>,
     val androidProjects: List<ModuleProject>,
     val javaProjects: List<ModuleProject>,
@@ -16,6 +17,11 @@ internal data class ParsedGraph(
 internal data class DependencyPair(
     val origin: ModuleProject,
     val target: ModuleProject,
+)
+
+internal data class ExternalDependencyPair(
+    val origin: ModuleProject,
+    val target: String,
 )
 
 internal data class ModuleProject(

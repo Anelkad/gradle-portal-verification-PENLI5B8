@@ -7,6 +7,8 @@ plugins {
     alias(libs.plugins.detekt)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.versionCheck)
+    alias(libs.plugins.androidLibrary) apply false
+    alias(libs.plugins.kotlinAndroid) apply false
 }
 
 subprojects {

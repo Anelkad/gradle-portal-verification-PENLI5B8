@@ -1,5 +1,6 @@
 pluginManagement {
     repositories {
+        google()
         gradlePluginPortal()
         mavenCentral()
     }
@@ -46,3 +47,4 @@ include(":example:thePremiumThing:data")
 include(":example:thePremiumThing:models")
 include(":example:system-test")
 includeBuild("plugin-build")
+include(":example:mylibrary")

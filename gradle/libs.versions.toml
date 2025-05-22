@@ -6,6 +6,10 @@ pluginPublish = "1.2.1"
 versionCheck = "0.51.0"
 android-lint = "8.6.0"
 android-lint-gradle = "1.0.0-alpha01"
+kotlinVersion = "2.0.20"
+runner = "1.0.2"
+espressoCore = "3.0.2"
+appcompatV7 = "28.0.0"
 
 [plugins]
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt"}
@@ -14,7 +18,12 @@ ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle"}
 pluginPublish = { id = "com.gradle.plugin-publish", version.ref = "pluginPublish"}
 versionCheck = { id = "com.github.ben-manes.versions", version.ref = "versionCheck"}
 lint = { id = "com.android.lint", version.ref = "android-lint"}
+androidLibrary = { id = "com.android.library", version.ref = "android-lint" }
+kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlinVersion" }
 
 [libraries]
 junit = "junit:junit:4.13.2"
 android-lint-gradle = { module = "androidx.lint:lint-gradle", version.ref = "android-lint-gradle" }
+runner = { group = "com.android.support.test", name = "runner", version.ref = "runner" }
+espresso-core = { group = "com.android.support.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+appcompat-v7 = { group = "com.android.support", name = "appcompat-v7", version.ref = "appcompatV7" }

@@ -1,6 +1,7 @@
 package io.github.anelkad.dependencygraph.plugin.core
 
 import io.github.anelkad.dependencygraph.plugin.DependencyPair
+import io.github.anelkad.dependencygraph.plugin.ExternalDependencyPair
 import io.github.anelkad.dependencygraph.plugin.ModuleProject
 import io.github.anelkad.dependencygraph.plugin.ParsedGraph
 
@@ -57,6 +58,30 @@ private fun gatherDependencies(
         currentProjectAndDependencies
     }
 }
+
+internal fun getExternalDependencies(
+    currentProject: ModuleProject,
+    parsedGraph: ParsedGraph
+): List<String> {
+    val externalDependencies: LinkedHashMap<ExternalDependencyPair, List<String>> =
+        parsedGraph.externalDependencies
+    val currentProjectExternalDependencies =
+        currentProject.gatherExternalDependencies(externalDependencies)
+    return currentProjectExternalDependencies
+
+//    println(currentProject.path +" - "+ currentProjectExternalDependencies.joinToString(", "))
+
+//    val file = File(currentProject.projectDir, "external_libs.txt")
+//    file.parentFile.mkdirs()
+//    file.delete()
+//    file.writeText(currentProjectExternalDependencies.joinToString("\n"))
+}
+
+private fun ModuleProject.gatherExternalDependencies(
+    externalDependencies: LinkedHashMap<ExternalDependencyPair, List<String>>,
+) = externalDependencies
+    .filter { (key, _) -> key.origin == this }
+    .map { (key, _) -> key.target }
 
 
 private fun ModuleProject.gatherDependents(
