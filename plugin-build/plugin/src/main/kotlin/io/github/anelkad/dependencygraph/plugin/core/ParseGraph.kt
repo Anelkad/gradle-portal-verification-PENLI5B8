@@ -145,6 +145,7 @@ internal fun parseDependencyGraph(
         projects = LinkedHashSet(projects.map { it.asModuleProject() }.sortedBy { it.path }),
         dependencies = dependencies,
         externalDependencies = externalDependencies,
+        ignoredExternalDependencies = ignoredExternalDependencies,
         multiplatformProjects = multiplatformProjects.map { it.asModuleProject() },
         androidProjects = androidProjects.map { it.asModuleProject() },
         javaProjects = javaProjects.map { it.asModuleProject() },

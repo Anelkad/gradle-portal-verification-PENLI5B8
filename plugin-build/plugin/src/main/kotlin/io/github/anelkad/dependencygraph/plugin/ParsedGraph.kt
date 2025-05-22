@@ -7,6 +7,7 @@ internal data class ParsedGraph(
     val projects: LinkedHashSet<ModuleProject>,
     val dependencies: LinkedHashMap<DependencyPair, List<String>>,
     val externalDependencies: LinkedHashMap<ExternalDependencyPair, List<String>> = linkedMapOf(),
+    val ignoredExternalDependencies: List<String> = emptyList(),
     val multiplatformProjects: List<ModuleProject>,
     val androidProjects: List<ModuleProject>,
     val javaProjects: List<ModuleProject>,
