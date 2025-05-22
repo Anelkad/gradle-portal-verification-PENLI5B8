@@ -51,7 +51,7 @@ abstract class CheckKotlinModuleTask : DefaultTask() {
 
         val androidProjects = graph.androidProjects
         val currentProjectDependencies =
-            gatherDependencies(mutableListOf(), dependencies)
+            gatherDependencies(mutableListOf(currentProject), dependencies)
 
         if (
             currentProjectDependencies.all {
