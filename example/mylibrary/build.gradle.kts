@@ -34,7 +34,6 @@ android {
 
 dependencies {
     implementation(project(path = ":example:models"))
-    implementation("androidx.appcompat:appcompat:1.6.1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.runner)
     androidTestImplementation(libs.espresso.core)
