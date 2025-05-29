@@ -12,7 +12,7 @@ dependencies {
     implementation(gradleApi())
 
     lintChecks(libs.android.lint.gradle)
-
+    implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
 }
 

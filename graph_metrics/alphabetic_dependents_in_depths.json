@@ -1,0 +1,19 @@
+{
+    ":example:data": 2,
+    ":example:domain": 1,
+    ":example:models": 15,
+    ":example:mylibrary": 2,
+    ":example:mylibrary2": 1,
+    ":example:shared-ui": 6,
+    ":example:theNewThing:data": 3,
+    ":example:theNewThing:domain": 2,
+    ":example:theNewThing:feature": 1,
+    ":example:theNewThing:models": 5,
+    ":example:theNewThing:ui": 2,
+    ":example:thePremiumThing:data": 3,
+    ":example:thePremiumThing:domain": 2,
+    ":example:thePremiumThing:feature": 1,
+    ":example:thePremiumThing:models": 5,
+    ":example:thePremiumThing:ui": 2,
+    ":example:ui": 1
+}
