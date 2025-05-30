@@ -20,6 +20,8 @@ abstract class DependencyGraphExtension @Inject constructor(project: Project) {
 
     val ignoreExternalDependencies: ListProperty<String> = objects.listProperty(String::class.java)
 
+    val triggerModuleNames: ListProperty<String> = objects.listProperty(String::class.java)
+
     /**
      *
      * The URL is used for adding links to modules to allow navigation to a module's subgraph just

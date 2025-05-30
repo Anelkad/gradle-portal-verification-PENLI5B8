@@ -23,6 +23,8 @@ dependencyGraphConfig {
 
     ignoreExternalDependencies.set(listOf())
 
+    triggerModuleNames.set(listOf("ui"))
+
     // Optional
     shouldLinkModuleText.set(true)
 
