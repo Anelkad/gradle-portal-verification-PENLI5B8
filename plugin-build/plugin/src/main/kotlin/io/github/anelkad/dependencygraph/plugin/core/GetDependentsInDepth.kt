@@ -21,7 +21,8 @@ internal fun getDependentsInDepth(
         .filter { (key, _) ->
             val (origin, target) = key
             dependents.contains(origin) &&
-                origin.path != target.path
+                origin.path != target.path &&
+                origin.path != currentProject.path
         }
         .forEach { (key, _ ) ->
             val (origin, _ ) = key
