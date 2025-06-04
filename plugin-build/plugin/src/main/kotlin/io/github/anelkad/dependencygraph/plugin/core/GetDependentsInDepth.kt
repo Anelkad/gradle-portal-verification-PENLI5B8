@@ -3,6 +3,7 @@ package io.github.anelkad.dependencygraph.plugin.core
 import io.github.anelkad.dependencygraph.plugin.DependencyPair
 import io.github.anelkad.dependencygraph.plugin.ModuleProject
 import io.github.anelkad.dependencygraph.plugin.ParsedGraph
+import java.io.File
 
 internal fun getDependentsInDepth(
     currentProject: ModuleProject,
@@ -26,6 +27,11 @@ internal fun getDependentsInDepth(
             val (origin, _ ) = key
             dependentModulesSet.add(origin.path)
         }
+
+    val file = File(currentProject.projectDir.absolutePath + "/build", "dependents_in_depth.txt")
+    file.parentFile.mkdirs()
+    file.delete()
+    file.writeText(dependentModulesSet.joinToString("\n"))
 
     if (dependentModulesSet.isNotEmpty()) {
         resultOfModulesDependents[currentProject.path] = dependentModulesSet.size
