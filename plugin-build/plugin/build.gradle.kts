@@ -8,22 +8,23 @@ plugins {
 }
 
 dependencies {
+    compileOnly("com.android.tools.build:gradle-api:8.2.2")
+    compileOnly("com.android.tools.build:gradle:8.2.2")
     implementation(kotlin("stdlib"))
     implementation(gradleApi())
-
     lintChecks(libs.android.lint.gradle)
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 }
 

@@ -61,6 +61,15 @@ abstract class DependencyGraphPlugin : Plugin<Project> {
             )
         }
 
+        project.tasks.register(CHECK_UNUSED_RESOURCES, CheckUnusedResourcesTask::class.java) {
+            it.parsedGraph.set(
+                parseDependencyGraph(
+                    rootProject = project.rootProject,
+                    ignoredModules = extension.ignoreModules.orNull ?: emptyList(),
+                )
+            )
+        }
+
         project.tasks.register(GRAPH_GV_TASK_NAME, DependencyGraphGVTask::class.java) {
             it.graphFileName.set(extension.graphFileName)
             it.mainBranchName.set(extension.mainBranchName)
@@ -86,5 +95,6 @@ abstract class DependencyGraphPlugin : Plugin<Project> {
         private const val METRICS_TASK_NAME = "dependencyMetrics"
         private const val CHECK_KOTLIN_MODULE = "checkKotlinModule"
         private const val GRAPH_GV_TASK_NAME = "dependencyGraph"
+        private const val CHECK_UNUSED_RESOURCES = "checkUnusedResources"
     }
 }
