@@ -17,7 +17,6 @@ abstract class CheckKotlinModuleTask : DefaultTask() {
         description = "Generates dependency metrics files for all local modules in the project."
     }
 
-
     /** The project dependencies graph as [ParsedGraph]`. */
     @get:Input
     @get:Option(
