@@ -9,6 +9,7 @@ internal data class ParsedGraph(
     val externalDependencies: LinkedHashMap<ExternalDependencyPair, List<String>> = linkedMapOf(),
     val ignoredExternalDependencies: List<String> = emptyList(),
     val triggerModuleNames: List<String> = emptyList(),
+    val androidProjectsEnabledResources: List<ModuleProject> = emptyList(),
     val multiplatformProjects: List<ModuleProject>,
     val androidProjects: List<ModuleProject>,
     val javaProjects: List<ModuleProject>,

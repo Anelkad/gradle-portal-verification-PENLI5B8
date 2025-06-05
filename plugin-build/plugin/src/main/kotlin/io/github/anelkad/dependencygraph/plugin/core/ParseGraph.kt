@@ -1,5 +1,6 @@
 package io.github.anelkad.dependencygraph.plugin.core
 
+import com.android.build.gradle.LibraryExtension
 import io.github.anelkad.dependencygraph.plugin.DependencyPair
 import io.github.anelkad.dependencygraph.plugin.ExternalDependencyPair
 import io.github.anelkad.dependencygraph.plugin.ParsedGraph
@@ -38,6 +39,7 @@ internal fun parseDependencyGraph(
     val externalDependencies = LinkedHashMap<ExternalDependencyPair, List<String>>()
     val multiplatformProjects = mutableListOf<Project>()
     val androidProjects = mutableListOf<Project>()
+    val androidProjectsEnabledResources = mutableListOf<Project>()
     val javaProjects = mutableListOf<Project>()
 
     // Again traverse the list of all sub-folders starting with the current project
@@ -61,6 +63,13 @@ internal fun parseDependencyGraph(
             project.plugins.hasPlugin("com.android.application")
         ) {
             androidProjects.add(project)
+            project.plugins.withId("com.android.library") {
+                val androidExtension = project.extensions.findByType(LibraryExtension::class.java)
+                val androidResourcesEnabled = androidExtension?.buildFeatures?.androidResources != false
+                if (androidResourcesEnabled) {
+                    androidProjectsEnabledResources.add(project)
+                }
+            }
         }
         if (
             project.plugins.hasPlugin("java-library") ||
@@ -150,6 +159,7 @@ internal fun parseDependencyGraph(
         triggerModuleNames = triggerModuleNames,
         multiplatformProjects = multiplatformProjects.map { it.asModuleProject() },
         androidProjects = androidProjects.map { it.asModuleProject() },
+        androidProjectsEnabledResources = androidProjectsEnabledResources.map { it.asModuleProject() },
         javaProjects = javaProjects.map { it.asModuleProject() },
         rootProjects = rootProjects.map { it.asModuleProject() },
         rootProject = rootProject.asModuleProject(),
