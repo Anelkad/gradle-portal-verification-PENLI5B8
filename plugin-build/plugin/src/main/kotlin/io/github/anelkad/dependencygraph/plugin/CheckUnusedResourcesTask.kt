@@ -68,7 +68,8 @@ abstract class CheckUnusedResourcesTask : DefaultTask() {
             "src/hms/java",
         ).map { File(currentProject.projectDir, it) }.filter { it.exists() }
 
-        val importRegex = Regex("""[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*\.R\b""")
+        val usedLibraryResources = Regex("""[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*\.R\b""")
+        val usedResources = listOf("R.drawable.", "R.string.", "R.plurals.")
         val usesResources = mutableSetOf<String>()
 
         srcDirs.forEach { srcDir ->
@@ -76,7 +77,7 @@ abstract class CheckUnusedResourcesTask : DefaultTask() {
                 .filter { it.isFile && (it.extension == "kt" || it.extension == "java") }
                 .forEach { file ->
                     file.forEachLine { line ->
-                        if (importRegex.find(line) != null) {
+                        if (usedLibraryResources.find(line) != null || usedResources.any { line.contains(it) }) {
                             usesResources.add(line)
                         }
                     }
