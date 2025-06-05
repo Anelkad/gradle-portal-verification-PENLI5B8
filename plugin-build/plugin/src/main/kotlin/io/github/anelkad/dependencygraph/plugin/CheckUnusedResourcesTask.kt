@@ -47,7 +47,10 @@ abstract class CheckUnusedResourcesTask : DefaultTask() {
 
         val usingResourcesInFiles = usesResources(currentProject = currentProject)
 
-        println("currentProject: ${currentProject.path} usingResourcesInFiles: $usingResourcesInFiles")
+        val file = File(currentProject.projectDir.path +"/build", "usingResourcesInFiles.txt")
+        file.parentFile.mkdirs()
+        file.delete()
+        file.writeText(usingResourcesInFiles.joinToString("\n"))
 
         val resDir = File(currentProject.projectDir, "src/main/res")
         val hasAndroidResources = resDir.exists() && resDir.walkTopDown().any { it.isFile }
@@ -65,7 +68,7 @@ abstract class CheckUnusedResourcesTask : DefaultTask() {
             "src/hms/java",
         ).map { File(currentProject.projectDir, it) }.filter { it.exists() }
 
-        val importRegex = Regex("""[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*\.R""")
+        val importRegex = Regex("""[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*\.R\b""")
         val usesResources = mutableSetOf<String>()
 
         srcDirs.forEach { srcDir ->
