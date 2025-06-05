@@ -74,7 +74,7 @@ private fun stringToHexColor(
     var g = (hash shr 8 and 0xFF)
     var b = (hash and 0xFF)
 
-    val lightenFactor = 0.5f // от 0 (нет) до 1 (белый)
+    val lightenFactor = 0.5f
     r = (r + ((255 - r) * lightenFactor)).toInt().coerceIn(0, 255)
     g = (g + ((255 - g) * lightenFactor)).toInt().coerceIn(0, 255)
     b = (b + ((255 - b) * lightenFactor)).toInt().coerceIn(0, 255)
