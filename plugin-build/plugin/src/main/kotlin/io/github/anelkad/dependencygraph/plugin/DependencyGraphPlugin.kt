@@ -60,12 +60,31 @@ abstract class DependencyGraphPlugin : Plugin<Project> {
                 )
             )
         }
+
+        project.tasks.register(GRAPH_GV_TASK_NAME, DependencyGraphGVTask::class.java) {
+            it.graphFileName.set(extension.graphFileName)
+            it.mainBranchName.set(extension.mainBranchName)
+            it.repoRootUrl.set(extension.repoRootUrl)
+            it.graphDirection.set(extension.graphDirection)
+            it.showLegend.set(extension.showLegend)
+            it.shouldLinkModuleText.set(extension.shouldLinkModuleText)
+            it.shouldGroupModules.set(extension.shouldGroupModules)
+
+            it.parsedGraph.set(
+                parseDependencyGraph(
+                    rootProject = project.rootProject,
+                    ignoredModules = extension.ignoreModules.orNull ?: emptyList(),
+                    triggerModuleNames = extension.triggerModuleNames.orNull ?: emptyList()
+                ),
+            )
+        }
     }
 
     companion object {
         private const val EXTENSION_NAME = "dependencyGraphConfig"
-        private const val GRAPH_TASK_NAME = "dependencyGraph"
+        private const val GRAPH_TASK_NAME = "dependencyGraphMermaid"
         private const val METRICS_TASK_NAME = "dependencyMetrics"
         private const val CHECK_KOTLIN_MODULE = "checkKotlinModule"
+        private const val GRAPH_GV_TASK_NAME = "dependencyGraph"
     }
 }

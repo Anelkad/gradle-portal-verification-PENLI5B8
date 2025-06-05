@@ -157,7 +157,7 @@ internal fun drawDependencyGraph(
 
     fileText += "```"
 
-    val graphFile = File(currentProject.projectDir, config.fileName)
+    val graphFile = File(currentProject.projectDir.absolutePath + "/build", config.fileName)
     graphFile.parentFile.mkdirs()
     graphFile.delete()
     graphFile.writeText(fileText)
