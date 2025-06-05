@@ -69,7 +69,7 @@ abstract class CheckUnusedResourcesTask : DefaultTask() {
         ).map { File(currentProject.projectDir, it) }.filter { it.exists() }
 
         val usedLibraryResources = Regex("""[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*\.R\b""")
-        val usedResources = listOf("R.drawable.", "R.string.", "R.plurals.")
+        val usedResources = listOf("R.drawable.", "R.string.", "R.plurals.", "R.color.")
         val usesResources = mutableSetOf<String>()
 
         srcDirs.forEach { srcDir ->
