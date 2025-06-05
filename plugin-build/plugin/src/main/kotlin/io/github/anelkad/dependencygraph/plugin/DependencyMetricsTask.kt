@@ -2,6 +2,8 @@ package io.github.anelkad.dependencygraph.plugin
 
 import io.github.anelkad.dependencygraph.plugin.core.getDependenciesInDepth
 import io.github.anelkad.dependencygraph.plugin.core.getDependentsInDepth
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.provider.Property
@@ -89,11 +91,11 @@ abstract class DependencyMetricsTask : DefaultTask() {
             graph = graph,
             resultOfModulesDependencies = resultOfModulesDependencies
         )
-        printModuleCentrality(
-            graph = graph,
-            resultOfModulesDependents = resultOfModulesDependents,
-            resultOfModulesDependencies = resultOfModulesDependencies
-        )
+//        printModuleCentrality(
+//            graph = graph,
+//            resultOfModulesDependents = resultOfModulesDependents,
+//            resultOfModulesDependencies = resultOfModulesDependencies
+//        )
     }
 
     private fun printModuleCentrality(
@@ -144,7 +146,7 @@ abstract class DependencyMetricsTask : DefaultTask() {
         graph: ParsedGraph,
         resultOfModulesDependents: MutableMap<String, Int>
     ) {
-        var resultDependentsInDepthText = ""
+//        var resultDependentsInDepthText = ""
         graph.projects.forEach {
             getDependentsInDepth(
                 currentProject = it,
@@ -152,21 +154,22 @@ abstract class DependencyMetricsTask : DefaultTask() {
                 resultOfModulesDependents = resultOfModulesDependents
             )
         }
-
-        resultOfModulesDependents.entries.sortedByDescending { it.value }.forEach {
-            resultDependentsInDepthText += "${it.key} - ${it.value}\n"
-        }
-        val file = File(graph.rootProject.projectDir, "sorted_projects_dependents_in_depths.txt")
+//        resultOfModulesDependents.entries.sortedByDescending { it.value }.forEach {
+//            resultDependentsInDepthText += "${it.key} - ${it.value}\n"
+//        }
+        val json = Json { prettyPrint = true }
+            .encodeToString(value = resultOfModulesDependents.toSortedMap().toMap())
+        val file = File(graph.rootProject.projectDir.absolutePath + "/graph_metrics", "alphabetic_dependents_in_depths.json")
         file.parentFile.mkdirs()
         file.delete()
-        file.writeText(resultDependentsInDepthText)
+        file.writeText(json)
     }
 
     private fun printDependenciesInDepth(
         graph: ParsedGraph,
         resultOfModulesDependencies: MutableMap<String, Int>
     ) {
-        var resultDependenciesInDepthText = ""
+//        var resultDependenciesInDepthText = ""
         graph.projects.forEach {
             getDependenciesInDepth(
                 currentProject = it,
@@ -175,12 +178,14 @@ abstract class DependencyMetricsTask : DefaultTask() {
             )
         }
 
-        resultOfModulesDependencies.entries.sortedByDescending { it.value }.forEach {
-            resultDependenciesInDepthText += "${it.key} - ${it.value}\n"
-        }
-        val file = File(graph.rootProject.projectDir, "sorted_projects_dependencies_in_depths.txt")
+//        resultOfModulesDependencies.entries.sortedByDescending { it.value }.forEach {
+//            resultDependenciesInDepthText += "${it.key} - ${it.value}\n"
+//        }
+        val json = Json { prettyPrint = true }
+            .encodeToString(value = resultOfModulesDependencies.toSortedMap().toMap())
+        val file = File(graph.rootProject.projectDir.absolutePath + "/graph_metrics", "alphabetic_dependencies_in_depths.json")
         file.parentFile.mkdirs()
         file.delete()
-        file.writeText(resultDependenciesInDepthText)
+        file.writeText(json)
     }
 }
