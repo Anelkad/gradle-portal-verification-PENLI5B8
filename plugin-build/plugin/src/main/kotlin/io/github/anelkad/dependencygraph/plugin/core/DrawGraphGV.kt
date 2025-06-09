@@ -102,6 +102,7 @@ private fun drawGroupedModulesGraph(
     relevantProjects.forEach {
         val color = stringToHexColor(input = it, triggerModuleNames = triggerModuleNames)
         fileText += "\"${it}\" [style=filled fillcolor=\"$color\" ];\n"
+        fileText += "\"for-testing\" -> \"${it}\";\n"
     }
 
     dependencies
@@ -117,7 +118,7 @@ private fun drawGroupedModulesGraph(
             fileText += "\"${origin.path}\" -> \"${target.path}\";\n"
         }
 
-    val graphFile = File(currentProject.projectDir.absolutePath + "/build", "graph$graphModuleGroup.txt")
+    val graphFile = File(currentProject.projectDir.absolutePath + "/build", "graph$graphModuleGroup.gv")
     graphFile.parentFile.mkdirs()
     graphFile.delete()
     graphFile.writeText("$fileText}")
