@@ -3,7 +3,6 @@ package io.github.anelkad.dependencygraph.plugin.core
 import io.github.anelkad.dependencygraph.plugin.DependencyPair
 import io.github.anelkad.dependencygraph.plugin.ModuleProject
 import io.github.anelkad.dependencygraph.plugin.ParsedGraph
-import io.github.anelkad.dependencygraph.plugin.ShowLegend
 import java.io.File
 
 @Suppress(
@@ -21,6 +20,7 @@ internal fun drawDependencyGraphGV(
     parsedGraph: ParsedGraph,
     isRootGraph: Boolean,
     config: DrawConfig,
+    graphModuleGroupNames: List<String>,
     triggerModuleNames: List<String>
 ) {
     val projects: LinkedHashSet<ModuleProject> = parsedGraph.projects
@@ -60,6 +60,67 @@ internal fun drawDependencyGraphGV(
     graphFile.delete()
     graphFile.writeText("$fileText}")
 
+    println("Project module dependency GV graph created at ${graphFile.absolutePath}")
+    if (graphModuleGroupNames.isNotEmpty()) {
+        graphModuleGroupNames.forEach { graphModuleGroup ->
+            drawGroupedModulesGraph(
+                parsedGraph = parsedGraph,
+                currentProject = currentProject,
+                isRootGraph = isRootGraph,
+                triggerModuleNames = triggerModuleNames,
+                graphModuleGroup = graphModuleGroup
+            )
+        }
+    }
+}
+
+private fun drawGroupedModulesGraph(
+    parsedGraph: ParsedGraph,
+    currentProject: ModuleProject,
+    isRootGraph: Boolean,
+    triggerModuleNames: List<String>,
+    graphModuleGroup: String
+) {
+    val projects: LinkedHashSet<ModuleProject> = parsedGraph.projects
+    val relevantProjects = projects.toList()
+        .map { it.path }
+        .filter { it.startsWith(graphModuleGroup) }
+
+    val dependencies: LinkedHashMap<DependencyPair, List<String>> =
+        parsedGraph.dependencies
+
+    val currentProjectDependencies =
+        gatherDependencies(mutableListOf(currentProject), dependencies)
+
+    var fileText = """
+        strict digraph DependencyGraph {
+        ratio=0.6;
+        node [shape=box fontsize=30 style=filled fillcolor="#B66FF5"];
+
+        """.trimIndent()
+
+    relevantProjects.forEach {
+        val color = stringToHexColor(input = it, triggerModuleNames = triggerModuleNames)
+        fileText += "\"${it}\" [style=filled fillcolor=\"$color\" ];\n"
+    }
+
+    dependencies
+        .filter { (key, _) ->
+            val (origin, target) = key
+            (isRootGraph || currentProjectDependencies.contains(origin)) &&
+                origin.path != target.path
+                && origin.path.startsWith(graphModuleGroup)
+                && target.path.startsWith(graphModuleGroup)
+        }
+        .forEach { (key) ->
+            val (origin, target) = key
+            fileText += "\"${origin.path}\" -> \"${target.path}\";\n"
+        }
+
+    val graphFile = File(currentProject.projectDir.absolutePath + "/build", "graph$graphModuleGroup.txt")
+    graphFile.parentFile.mkdirs()
+    graphFile.delete()
+    graphFile.writeText("$fileText}")
     println("Project module dependency GV graph created at ${graphFile.absolutePath}")
 }
 

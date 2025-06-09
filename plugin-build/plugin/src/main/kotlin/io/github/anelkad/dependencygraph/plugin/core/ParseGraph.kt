@@ -19,6 +19,7 @@ internal fun parseDependencyGraph(
     rootProject: Project,
     ignoredModules: List<String>,
     ignoredExternalDependencies: List<String> = emptyList(),
+    graphModuleGroupNames: List<String> = emptyList(),
     triggerModuleNames: List<String> = emptyList(),
 ): ParsedGraph {
     val rootProjects = mutableListOf<Project>()
@@ -156,6 +157,7 @@ internal fun parseDependencyGraph(
         dependencies = dependencies,
         externalDependencies = externalDependencies,
         ignoredExternalDependencies = ignoredExternalDependencies,
+        graphModuleGroupNames = graphModuleGroupNames,
         triggerModuleNames = triggerModuleNames,
         multiplatformProjects = multiplatformProjects.map { it.asModuleProject() },
         androidProjects = androidProjects.map { it.asModuleProject() },
