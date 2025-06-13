@@ -66,6 +66,7 @@ internal fun parseDependencyGraph(
             androidProjects.add(project)
             project.plugins.withId("com.android.library") {
                 val androidExtension = project.extensions.findByType(LibraryExtension::class.java)
+
                 val androidResourcesEnabled = androidExtension?.buildFeatures?.androidResources != false
                 if (androidResourcesEnabled) {
                     androidProjectsEnabledResources.add(project)
@@ -77,6 +78,7 @@ internal fun parseDependencyGraph(
             project.plugins.hasPlugin("java") ||
             project.plugins.hasPlugin("org.jetbrains.kotlin.jvm")
         ) {
+            project.projectDir
             javaProjects.add(project)
         }
 

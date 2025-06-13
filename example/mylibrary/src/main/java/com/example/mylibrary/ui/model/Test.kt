@@ -1,4 +1,4 @@
-package com.example.mylibrary
+package com.example.mylibrary.ui.model
 
 import com.example.R
 

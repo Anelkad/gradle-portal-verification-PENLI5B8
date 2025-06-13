@@ -12,7 +12,7 @@ import java.io.File
 abstract class CheckUnusedResourcesTask : DefaultTask() {
     init {
         group = BasePlugin.BUILD_GROUP
-        description = "Generates dependency metrics files for all local modules in the project."
+        description = "Checks if there are modules where resources are not used."
     }
 
     /** The project dependencies graph as [ParsedGraph]`. */
