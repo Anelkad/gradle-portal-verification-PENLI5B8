@@ -75,6 +75,8 @@ abstract class DependencyGraphPlugin : Plugin<Project> {
                 parseDependencyGraph(
                     rootProject = project.rootProject,
                     ignoredModules = extension.ignoreModules.orNull ?: emptyList(),
+                    commonDirs = extension.commonDirs.orNull ?: emptyList(),
+                    modulesDependencyToWarning = extension.modulesDependencyToWarning.orNull ?: emptyList(),
                 )
             )
         }

@@ -1,8 +1,11 @@
 package io.github.anelkad.dependencygraph.plugin.core
 
+import com.android.build.api.dsl.CommonExtension
 import com.android.build.gradle.LibraryExtension
+import io.github.anelkad.dependencygraph.plugin.*
 import io.github.anelkad.dependencygraph.plugin.DependencyPair
 import io.github.anelkad.dependencygraph.plugin.ExternalDependencyPair
+import io.github.anelkad.dependencygraph.plugin.ModuleProject
 import io.github.anelkad.dependencygraph.plugin.ParsedGraph
 import io.github.anelkad.dependencygraph.plugin.asModuleProject
 import org.gradle.api.Project
@@ -21,6 +24,8 @@ internal fun parseDependencyGraph(
     ignoredExternalDependencies: List<String> = emptyList(),
     graphModuleGroupNames: List<String> = emptyList(),
     triggerModuleNames: List<String> = emptyList(),
+    commonDirs: List<String> = emptyList(),
+    modulesDependencyToWarning: List<String> = emptyList()
 ): ParsedGraph {
     val rootProjects = mutableListOf<Project>()
     var queue = mutableListOf(rootProject)
@@ -39,7 +44,7 @@ internal fun parseDependencyGraph(
     val dependencies = LinkedHashMap<DependencyPair, List<String>>()
     val externalDependencies = LinkedHashMap<ExternalDependencyPair, List<String>>()
     val multiplatformProjects = mutableListOf<Project>()
-    val androidProjects = mutableListOf<Project>()
+    val androidProjects = mutableListOf<ModuleProject>()
     val androidProjectsEnabledResources = mutableListOf<Project>()
     val javaProjects = mutableListOf<Project>()
 
@@ -63,10 +68,11 @@ internal fun parseDependencyGraph(
             project.plugins.hasPlugin("com.android.library") ||
             project.plugins.hasPlugin("com.android.application")
         ) {
-            androidProjects.add(project)
             project.plugins.withId("com.android.library") {
                 val androidExtension = project.extensions.findByType(LibraryExtension::class.java)
-
+                androidExtension?.namespace?.let {
+                    androidProjects.add(project.asModuleProject(it))
+                } ?: androidProjects.add(project.asModuleProject())
                 val androidResourcesEnabled = androidExtension?.buildFeatures?.androidResources != false
                 if (androidResourcesEnabled) {
                     androidProjectsEnabledResources.add(project)
@@ -159,10 +165,12 @@ internal fun parseDependencyGraph(
         dependencies = dependencies,
         externalDependencies = externalDependencies,
         ignoredExternalDependencies = ignoredExternalDependencies,
+        commonDirs = commonDirs,
+        modulesDependencyToWarning = modulesDependencyToWarning,
         graphModuleGroupNames = graphModuleGroupNames,
         triggerModuleNames = triggerModuleNames,
         multiplatformProjects = multiplatformProjects.map { it.asModuleProject() },
-        androidProjects = androidProjects.map { it.asModuleProject() },
+        androidProjects = androidProjects,
         androidProjectsEnabledResources = androidProjectsEnabledResources.map { it.asModuleProject() },
         javaProjects = javaProjects.map { it.asModuleProject() },
         rootProjects = rootProjects.map { it.asModuleProject() },

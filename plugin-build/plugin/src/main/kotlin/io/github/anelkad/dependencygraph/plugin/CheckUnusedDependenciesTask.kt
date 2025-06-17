@@ -26,51 +26,100 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
     @TaskAction
     fun check() {
         val graph = parsedGraph.get()
-        val androidProjects = graph.androidProjectsEnabledResources
-        val modulesWithUnusedResources = mutableListOf<String>()
+        val dependencies: LinkedHashMap<DependencyPair, List<String>> =
+            graph.dependencies
+
+        val matchingModulesWithPackage: MutableMap<String, MutableSet<String>> = mutableMapOf()
+        getMatchingModuleToPackage(
+            graph = graph,
+            result = matchingModulesWithPackage,
+        )
+
+        val modulesDependencyToWarning = graph.modulesDependencyToWarning
+
+        val modulesUnusedDependency = mutableMapOf<String, MutableSet<String>>()
+        val modulesUnusedDependencyWarning = mutableMapOf<String, MutableSet<String>>()
+
+        graph.projects.forEach { project ->
+            val currentProjectDependencies = gatherDependencies(
+                currentProject = project,
+                currentProjectAndDependencies = mutableListOf(project),
+                dependencies = dependencies
+            )
+            currentProjectDependencies.remove(project)
+
+            currentProjectDependencies.forEach { dependency ->
+                if (
+                    !usesDependencies(
+                        currentProject = project,
+                        packages = matchingModulesWithPackage[dependency.path] ?: emptySet(),
+                    )
+                    && project.path != ":app"
+                ) {
+                    if (dependency.path in modulesDependencyToWarning) {
+                        if (modulesUnusedDependencyWarning[project.path] == null) {
+                            modulesUnusedDependencyWarning[project.path] = mutableSetOf()
+                        }
+                        modulesUnusedDependencyWarning[project.path]?.add(dependency.path)
+                    } else {
+                        if (modulesUnusedDependency[project.path] == null) {
+                            modulesUnusedDependency[project.path] = mutableSetOf()
+                        }
+                        modulesUnusedDependency[project.path]?.add(dependency.path)
+                    }
+                }
+            }
+        }
+
+        if (modulesUnusedDependency.isNotEmpty()) {
+            throw GradleException(
+                "Modules with unused dependencies: \n${
+                    modulesUnusedDependency.entries.joinToString("\n") { "${it.key} -> ${it.value}" }
+                }",
+            )
+        }
+
+        if (modulesUnusedDependencyWarning.isNotEmpty()) {
+            modulesUnusedDependencyWarning.entries.forEach { (module, dependencies) ->
+                project.logger.warn("⚠️ $module does not use directly dependencies: $dependencies")
+            }
+        }
+    }
+
+    private fun getMatchingModuleToPackage(
+        graph: ParsedGraph,
+        result: MutableMap<String, MutableSet<String>>
+    ) {
+        val androidProjects = graph.androidProjects
+        val androidModulePaths = androidProjects.associate { it.path to it.namespace }
 
         var matchingModulesWithPackage = ""
         graph.projects.forEach {
+            val modulePackagesSet = mutableSetOf<String>()
+            if (it.path in androidModulePaths.keys) {
+                androidModulePaths[it.path]?.let { namespace ->
+                    modulePackagesSet.add(namespace)
+                }
+            }
             getModulePackageName(
                 currentProject = it,
-                appendResult = {
-                    matchingModulesWithPackage += it
-                }
+                commonDirs = graph.commonDirs,
+                result = modulePackagesSet,
             )
-//            if (it in androidProjects) {
-//                if (checkIfResourcesUnused(it)) {
-//                    modulesWithUnusedResources.add(it.path)
-//                }
-//            }
+            matchingModulesWithPackage += "\n${it.path} - $modulePackagesSet"
+            result[it.path] = modulePackagesSet
         }
-//        if (modulesWithUnusedResources.isNotEmpty()) {
-//            throw GradleException("Modules to disable resources: ${modulesWithUnusedResources.joinToString(", ")}")
-//        }
 
-        val file = File(graph.rootProject.projectDir.path +"/build", "matchingModulesWithPackage.txt")
+        val file = File(graph.rootProject.projectDir.path + "/build", "matchingModulesWithPackage.txt")
         file.parentFile.mkdirs()
         file.delete()
         file.writeText(matchingModulesWithPackage)
     }
 
-    private fun checkIfResourcesUnused(
-        currentProject: ModuleProject
+    private fun usesDependencies(
+        currentProject: ModuleProject,
+        packages: Set<String>
     ): Boolean {
-
-        val usingResourcesInFiles = usesResources(currentProject = currentProject)
-
-        val file = File(currentProject.projectDir.path +"/build", "usingResourcesInFiles.txt")
-        file.parentFile.mkdirs()
-        file.delete()
-        file.writeText(usingResourcesInFiles.joinToString("\n"))
-
-        val resDir = File(currentProject.projectDir, "src/main/res")
-        val hasAndroidResources = resDir.exists() && resDir.walkTopDown().any { it.isFile }
-
-        return usingResourcesInFiles.isEmpty() && !hasAndroidResources
-    }
-
-    private fun usesResources(currentProject: ModuleProject): Set<String> {
         val srcDirs = listOf(
             "src/main/java",
             "src/main/kotlin",
@@ -78,29 +127,47 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
             "src/gms/java",
             "src/hms/kotlin",
             "src/hms/java",
+            "src/main/res"
         ).map { File(currentProject.projectDir, it) }.filter { it.exists() }
-
-        val usedLibraryResources = Regex("""[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*\.R\b""")
-        val usedResources = listOf("R.drawable.", "R.string.", "R.plurals.", "R.color.")
-        val usesResources = mutableSetOf<String>()
 
         srcDirs.forEach { srcDir ->
             srcDir.walkTopDown()
-                .filter { it.isFile && (it.extension == "kt" || it.extension == "java") }
+                .filter { it.isFile && (it.extension == "kt" || it.extension == "xml") }
                 .forEach { file ->
+                    var isUsed = false
                     file.forEachLine { line ->
-                        if (usedLibraryResources.find(line) != null || usedResources.any { line.contains(it) }) {
-                            usesResources.add(line)
+                        if (packages.any { line.contains(it) }) {
+                            isUsed = true
                         }
                     }
+                    if (isUsed) return true
                 }
         }
-        return usesResources
+        return false
+    }
+
+    private fun gatherDependencies(
+        currentProject: ModuleProject,
+        currentProjectAndDependencies: MutableList<ModuleProject>,
+        dependencies: LinkedHashMap<DependencyPair, List<String>>,
+    ): MutableList<ModuleProject> {
+        dependencies
+            .map { it.key }
+            .forEach { (currProject, dependencyProject) ->
+                if (
+                    currentProject == currProject &&
+                    !currentProjectAndDependencies.contains(dependencyProject)
+                ) {
+                    currentProjectAndDependencies.add(dependencyProject)
+                }
+            }
+        return currentProjectAndDependencies
     }
 
     private fun getModulePackageName(
         currentProject: ModuleProject,
-        appendResult: (String) -> Unit
+        result: MutableSet<String>,
+        commonDirs: List<String> = emptyList()
     ) {
         val sourceDirs = listOf(
             "src/main/java",
@@ -109,13 +176,6 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
             "src/gms/java",
             "src/hms/kotlin",
             "src/hms/java",
-        )
-        val commonDirs = listOf(
-            "di",
-            "ui",
-            "data",
-            "domain",
-            "model"
         )
         sourceDirs
             .map { File(currentProject.projectDir, it) }
@@ -137,7 +197,7 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                         while (commonDirs.any { relativePath.endsWith(".$it") }) {
                             val suffix = commonDirs.find { relativePath.endsWith(".$it") }
                             suffix?.let {
-                               relativePath = relativePath.removeSuffix(".$suffix")
+                                relativePath = relativePath.removeSuffix(".$suffix")
                             }
                         }
                         relativePath
@@ -145,9 +205,8 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                     .sortedBy { it.length }
                     .first()
                     .let {
-                        appendResult("\n${currentProject.path} - $it")
+                        result.add(it)
                     }
-
             }
     }
 }

@@ -14,6 +14,16 @@ dependencyGraphConfig {
 
     graphModuleGroupNames.set(listOf(":example:theNewThing"))
 
+    commonDirs.set(
+        listOf(
+            "di",
+            "ui",
+            "data",
+            "domain",
+            "model",
+        ),
+    )
+
     // Optional
     graphDirection.set(io.github.anelkad.dependencygraph.plugin.Direction.LeftToRight)
 
