@@ -33,7 +33,7 @@ android {
 }
 
 dependencies {
-    implementation(project(path = ":example:models"))
+//    implementation(project(path = ":example:models"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.runner)
     androidTestImplementation(libs.espresso.core)

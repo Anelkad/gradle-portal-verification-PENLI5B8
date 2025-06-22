@@ -3,6 +3,6 @@ plugins {
 }
 
 dependencies {
-    implementation(project(path = ":example:thePremiumThing:data"))
-    api(project(path = ":example:thePremiumThing:models"))
+//    implementation(project(path = ":example:thePremiumThing:data"))
+//    api(project(path = ":example:thePremiumThing:models"))
 }

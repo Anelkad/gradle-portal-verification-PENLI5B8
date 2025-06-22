@@ -3,6 +3,6 @@ plugins {
 }
 
 dependencies {
-    implementation(project(path = ":example:data"))
-    api(project(path = ":example:models"))
+//    implementation(project(path = ":example:data"))
+//    api(project(path = ":example:models"))
 }

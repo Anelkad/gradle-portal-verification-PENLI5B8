@@ -24,6 +24,12 @@ dependencyGraphConfig {
         ),
     )
 
+    modulesDependencyToWarning.set(
+        listOf(
+//            ":example:models",
+        )
+    )
+
     // Optional
     graphDirection.set(io.github.anelkad.dependencygraph.plugin.Direction.LeftToRight)
 
