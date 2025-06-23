@@ -24,6 +24,10 @@ dependencyGraphConfig {
         ),
     )
 
+    searchInDepth.set(
+        listOf(":example")
+    )
+
     modulesDependencyToWarning.set(
         listOf(
 //            ":example:models",

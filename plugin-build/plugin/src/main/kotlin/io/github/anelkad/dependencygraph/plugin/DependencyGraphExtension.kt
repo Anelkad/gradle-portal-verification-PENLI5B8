@@ -26,6 +26,8 @@ abstract class DependencyGraphExtension @Inject constructor(project: Project) {
 
     val triggerModuleNames: ListProperty<String> = objects.listProperty(String::class.java)
 
+    val searchInDepth: ListProperty<String> = objects.listProperty(String::class.java)
+
     val graphModuleGroupNames: ListProperty<String> = objects.listProperty(String::class.java)
 
     /**

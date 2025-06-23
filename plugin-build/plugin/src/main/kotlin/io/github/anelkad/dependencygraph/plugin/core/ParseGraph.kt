@@ -25,7 +25,8 @@ internal fun parseDependencyGraph(
     graphModuleGroupNames: List<String> = emptyList(),
     triggerModuleNames: List<String> = emptyList(),
     commonDirs: List<String> = emptyList(),
-    modulesDependencyToWarning: List<String> = emptyList()
+    modulesDependencyToWarning: List<String> = emptyList(),
+    searchInDepth: List<String> = emptyList()
 ): ParsedGraph {
     val rootProjects = mutableListOf<Project>()
     var queue = mutableListOf(rootProject)
@@ -175,5 +176,6 @@ internal fun parseDependencyGraph(
         javaProjects = javaProjects.map { it.asModuleProject() },
         rootProjects = rootProjects.map { it.asModuleProject() },
         rootProject = rootProject.asModuleProject(),
+        searchInDepth = searchInDepth
     )
 }

@@ -77,6 +77,7 @@ abstract class DependencyGraphPlugin : Plugin<Project> {
                     ignoredModules = extension.ignoreModules.orNull ?: emptyList(),
                     commonDirs = extension.commonDirs.orNull ?: emptyList(),
                     modulesDependencyToWarning = extension.modulesDependencyToWarning.orNull ?: emptyList(),
+                    searchInDepth = extension.searchInDepth.orNull ?: emptyList()
                 )
             )
         }

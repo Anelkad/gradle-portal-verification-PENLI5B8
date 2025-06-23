@@ -33,6 +33,8 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
         val dependencies: LinkedHashMap<DependencyPair, List<String>> =
             graph.dependencies
 
+        val searchInDepth = graph.searchInDepth
+
         val matchingModulesWithPackage: MutableMap<ModuleProject, MutableSet<String>> =
             mutableMapOf()
         getMatchingModuleToPackage(
@@ -58,7 +60,6 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
 
         val modulesUnusedDependency = mutableMapOf<String, MutableSet<String>>()
         val modulesUnusedDependencyWarning = mutableMapOf<String, MutableSet<String>>()
-        val searchInDepth = listOf(":example") // ":feature", ":plugin"
 
         graph.projects.forEach { project ->
             val currentProjectDependencies = gatherDependencies(
@@ -67,29 +68,29 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                 dependencies = dependencies
             )
             currentProjectDependencies.remove(project)
-            val foundUseCases = findUseCases(project)
             if (searchInDepth.any { project.path.startsWith(it) }) {
+                println("searching in ${project.path}")
+                val foundUseCases = findUseCases(project)
                 foundUseCases.forEach { useCase ->
-                    val useCaseAllowedModule = useCaseAllowedImportedPackage[useCase.packageName + useCase.className]
-                    if (useCaseAllowedModule == null) {
-                        val fromModule = matchingPackageToModule.entries.find {
-                            it.key.startsWith(useCase.packageName)
-                        }
-                        fromModule?.let { module ->
-                            val foundUsedModules = findUsedClassesOfUseCaseFile(
-                                currentProject = module.value,
-                                useCaseName = useCase.className,
-                                currentProjectPackage = module.key,
-                            ).map { it.packageName }
-                            if (useCaseAllowedImportedPackage[useCase.packageName + useCase.className] == null) {
-                                useCaseAllowedImportedPackage[useCase.packageName + useCase.className] =
-                                    mutableSetOf()
-                            }
-                            useCaseAllowedImportedPackage[useCase.packageName + useCase.className]?.addAll(
-                                foundUsedModules
-                            )
-                        }
+                    println("in usecase $useCase")
+                    val fromModule = matchingPackageToModule.entries.maxBy {
+                        it.key.commonPrefixWith(useCase.packageName).length
                     }
+                    println("usecase from module ${fromModule?.value?.path}")
+                    fromModule?.let { module ->
+                        val foundUsedModules = findUsedClassesOfUseCaseFile(
+                            currentProject = module.value,
+                            useCaseName = useCase.className,
+                            currentProjectPackage = module.key,
+                        ).map { it.packageName }
+                        if (useCaseAllowedImportedPackage[useCase.packageName + useCase.className] == null) {
+                            useCaseAllowedImportedPackage[useCase.packageName + useCase.className] =
+                                mutableSetOf()
+                        }
+                        useCaseAllowedImportedPackage[useCase.packageName + useCase.className]?.addAll(
+                            foundUsedModules,
+                        )
+                    } ?: println("qwerty! $useCase not found!!")
                     useCaseAllowedImportedPackage[useCase.packageName + useCase.className]?.forEach { packageName ->
                         if (moduleAllowedImportedModules[project.path] == null) {
                             moduleAllowedImportedModules[project.path] = mutableSetOf()
@@ -126,6 +127,7 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                     }
                 }
             }
+            println("----end-----")
         }
 
         if (useCaseAllowedImportedPackage.isNotEmpty()) {
@@ -165,11 +167,11 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
 
     private fun getModuleByPackage(
         packageName: String
-    ): ModuleProject? {
-        val module =  matchingPackageToModule.entries.find {
-            packageName.startsWith(it.key) || it.key.startsWith(packageName)
+    ): ModuleProject {
+        val module = matchingPackageToModule.entries.maxBy {
+            packageName.commonPrefixWith(it.key).length
         }
-        return module?.value
+        return module.value
     }
 
     private fun getMatchingModuleToPackage(
@@ -243,7 +245,7 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
         ).map { File(currentProject.projectDir, it) }.filter { it.exists() }
 
         val findClassesRegex = Regex("""^import\s+([a-zA-Z0-9_.]+)\.model(s)?\.([A-Z][A-Za-z0-9_]*)$""")
-        val findDelegatesRegex = Regex("""^import\s+([a-zA-Z0-9_.]+)\.delegate\.([A-Z][A-Za-z0-9_]*)$""")
+        val findDelegatesRegex = Regex("""^import\s+([a-zA-Z0-9_.]+)\.([A-Z][A-Za-z0-9_]*(Delegate|Updater))$""")
 
         val result = mutableListOf<FoundClass>()
 
@@ -253,29 +255,31 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                     it.isFile && (it.extension == "kt") && it.name == "$useCaseName.kt"
                 }
                 .forEach { file ->
+                    println("found file $useCaseName.kt in $srcDir")
+                    println("currentProjectPackage $currentProjectPackage")
                     file.forEachLine { line ->
                         val matchClasses = findClassesRegex.find(line)
-                        val matchDelegates = findDelegatesRegex.find(line)
                         if (matchClasses != null) {
                             val packageName = matchClasses.groupValues[1]
-                            val className = matchClasses.groupValues[3]
+                            val className = matchClasses.value.substringAfterLast(".")
+                            println("found model $className with package $packageName")
 
-                            if (!packageName.startsWith(currentProjectPackage) || !currentProjectPackage.startsWith(packageName)) {
+                            if (currentProjectPackage.commonPrefixWith(packageName).isEmpty()) {
                                 result.add(FoundClass(className = className, packageName = packageName))
                                 val module = getModuleByPackage(packageName)
-                                if (module != null) {
-                                    val classResult = findImportsOfModelClassFile(
-                                        currentProject = module,
-                                        className = className,
-                                        currentProjectPackage = packageName
-                                    )
-                                    result.addAll(classResult)
-                                }
+                                val classResult = findImportsOfModelClassFile(
+                                    currentProject = module,
+                                    className = className,
+                                    currentProjectPackage = packageName,
+                                )
+                                result.addAll(classResult)
                             }
                         }
+                        val matchDelegates = findDelegatesRegex.find(line)
                         if (matchDelegates != null) {
                             val packageName = matchDelegates.groupValues[1]
-                            val className = matchDelegates.groupValues[3]
+                            val className = matchDelegates.value.substringAfterLast(".")
+                            println("found delegate $className with package $packageName")
                             result.add(FoundClass(packageName = packageName, className = className))
                         }
                     }
@@ -303,12 +307,15 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                     it.isFile && (it.extension == "kt") && it.name == "$className.kt"
                 }
                 .forEach { file ->
+                    println("found file $className.kt in $srcDir")
+                    println("currentProjectPackage $currentProjectPackage")
                     file.forEachLine { line ->
                         val match = findClassesRegex.find(line)
                         if (match != null) {
                             val packageName = match.groupValues[1]
-                            val className1 = match.groupValues[3]
-                            if (!packageName.startsWith(currentProjectPackage) || !currentProjectPackage.startsWith(packageName)) {
+                            val className1 = match.value.substringAfterLast(".")
+                            if (packageName.commonPrefixWith(currentProjectPackage).isEmpty()) {
+                                println("found model $className1 with package $packageName")
                                 result.add(
                                     FoundClass(
                                         packageName = packageName,

@@ -12,6 +12,7 @@ internal data class ParsedGraph(
     val graphModuleGroupNames: List<String> = emptyList(),
     val androidProjectsEnabledResources: List<ModuleProject> = emptyList(),
     val commonDirs: List<String> = emptyList(),
+    val searchInDepth: List<String> = emptyList(),
     val modulesDependencyToWarning: List<String> = emptyList(),
     val multiplatformProjects: List<ModuleProject>,
     val androidProjects: List<ModuleProject>,

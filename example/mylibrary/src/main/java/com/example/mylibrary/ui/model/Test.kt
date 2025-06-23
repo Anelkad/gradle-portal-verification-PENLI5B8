@@ -1,6 +1,6 @@
 package com.example.mylibrary.ui.model
 
-import com.example.mylibrary2.GetSomeUseCase
+import com.test.mylibrary2.domain.usecase.GetSomeUseCase
 
 
 class Test(
