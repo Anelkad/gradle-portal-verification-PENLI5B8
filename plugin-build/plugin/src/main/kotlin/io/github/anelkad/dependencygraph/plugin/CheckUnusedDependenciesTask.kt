@@ -264,7 +264,7 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                             val className = matchClasses.value.substringAfterLast(".")
                             println("found model $className with package $packageName")
 
-                            if (currentProjectPackage.commonPrefixWith(packageName).isEmpty()) {
+                            if (packageName.contains("$currentProjectPackage.")) {
                                 result.add(FoundClass(className = className, packageName = packageName))
                                 val module = getModuleByPackage(packageName)
                                 val classResult = findImportsOfModelClassFile(
@@ -314,7 +314,7 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                         if (match != null) {
                             val packageName = match.groupValues[1]
                             val className1 = match.value.substringAfterLast(".")
-                            if (packageName.commonPrefixWith(currentProjectPackage).isEmpty()) {
+                            if (packageName.contains("$currentProjectPackage.")) {
                                 println("found model $className1 with package $packageName")
                                 result.add(
                                     FoundClass(
