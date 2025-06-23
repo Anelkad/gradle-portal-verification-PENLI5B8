@@ -1,6 +1,6 @@
 package com.example.mylibrary.ui.model
 
-import com.example.R
+import com.example.mylibrary2.GetSomeUseCase
 
 
 class Test(
@@ -8,5 +8,5 @@ class Test(
 )
 
 fun check() {
-    com.example.R
+    val useCase: GetSomeUseCase
 }

@@ -30,7 +30,7 @@ internal data class ExternalDependencyPair(
     val target: String,
 )
 
-internal data class ModuleProject(
+data class ModuleProject(
     val path: String,
     val projectDir: File,
     val namespace: String? = null

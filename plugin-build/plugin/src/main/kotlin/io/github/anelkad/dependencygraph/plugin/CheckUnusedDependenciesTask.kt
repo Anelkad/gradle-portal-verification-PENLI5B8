@@ -5,6 +5,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
 import java.io.File
@@ -23,22 +24,41 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
     )
     internal abstract val parsedGraph: Property<ParsedGraph>
 
+    @Internal
+    val matchingPackageToModule: MutableMap<String, ModuleProject> = mutableMapOf()
+
     @TaskAction
     fun check() {
         val graph = parsedGraph.get()
         val dependencies: LinkedHashMap<DependencyPair, List<String>> =
             graph.dependencies
 
-        val matchingModulesWithPackage: MutableMap<String, MutableSet<String>> = mutableMapOf()
+        val matchingModulesWithPackage: MutableMap<ModuleProject, MutableSet<String>> =
+            mutableMapOf()
         getMatchingModuleToPackage(
             graph = graph,
             result = matchingModulesWithPackage,
         )
 
+        matchingModulesWithPackage.entries.forEach { (module, packages) ->
+            packages.forEach { pack ->
+                matchingPackageToModule.set(key = pack, value = module)
+            }
+        }
+
+        val file = File(graph.rootProject.projectDir.path + "/build", "matchingPackageToModule.txt")
+        file.parentFile.mkdirs()
+        file.delete()
+        file.writeText(matchingPackageToModule.entries.joinToString { "${it.key} -> ${it.value}\n" })
+
         val modulesDependencyToWarning = graph.modulesDependencyToWarning
+
+        val useCaseAllowedImportedPackage: MutableMap<String, MutableSet<String>> = mutableMapOf()
+        val moduleAllowedImportedModules: MutableMap<String, MutableSet<String>> = mutableMapOf()
 
         val modulesUnusedDependency = mutableMapOf<String, MutableSet<String>>()
         val modulesUnusedDependencyWarning = mutableMapOf<String, MutableSet<String>>()
+        val searchInDepth = listOf(":example") // ":feature", ":plugin"
 
         graph.projects.forEach { project ->
             val currentProjectDependencies = gatherDependencies(
@@ -47,28 +67,85 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                 dependencies = dependencies
             )
             currentProjectDependencies.remove(project)
+            val foundUseCases = findUseCases(project)
+            if (searchInDepth.any { project.path.startsWith(it) }) {
+                foundUseCases.forEach { useCase ->
+                    val useCaseAllowedModule = useCaseAllowedImportedPackage[useCase.packageName + useCase.className]
+                    if (useCaseAllowedModule == null) {
+                        val fromModule = matchingPackageToModule.entries.find {
+                            it.key.startsWith(useCase.packageName)
+                        }
+                        fromModule?.let { module ->
+                            val foundUsedModules = findUsedClassesOfUseCaseFile(
+                                currentProject = module.value,
+                                useCaseName = useCase.className,
+                                currentProjectPackage = module.key,
+                            ).map { it.packageName }
+                            if (useCaseAllowedImportedPackage[useCase.packageName + useCase.className] == null) {
+                                useCaseAllowedImportedPackage[useCase.packageName + useCase.className] =
+                                    mutableSetOf()
+                            }
+                            useCaseAllowedImportedPackage[useCase.packageName + useCase.className]?.addAll(
+                                foundUsedModules
+                            )
+                        }
+                    }
+                    useCaseAllowedImportedPackage[useCase.packageName + useCase.className]?.forEach { packageName ->
+                        if (moduleAllowedImportedModules[project.path] == null) {
+                            moduleAllowedImportedModules[project.path] = mutableSetOf()
+                        }
+                        val modulePath = getModuleByPackage(packageName)
+                        modulePath?.let {
+                            moduleAllowedImportedModules[project.path]?.add(it.path)
+                        }
+                    }
+                }
+            }
 
             currentProjectDependencies.forEach { dependency ->
                 if (
                     !usesDependencies(
                         currentProject = project,
-                        packages = matchingModulesWithPackage[dependency.path] ?: emptySet(),
+                        packages = matchingModulesWithPackage[dependency] ?: emptySet(),
                     )
                     && project.path != ":app"
                 ) {
-                    if (dependency.path in modulesDependencyToWarning) {
-                        if (modulesUnusedDependencyWarning[project.path] == null) {
-                            modulesUnusedDependencyWarning[project.path] = mutableSetOf()
+                    val allowedImports = moduleAllowedImportedModules[project.path] ?: emptySet()
+                    if (dependency.path !in allowedImports)  {
+                        if (dependency.path in modulesDependencyToWarning) {
+                            if (modulesUnusedDependencyWarning[project.path] == null) {
+                                modulesUnusedDependencyWarning[project.path] = mutableSetOf()
+                            }
+                            modulesUnusedDependencyWarning[project.path]?.add(dependency.path)
+                        } else {
+                            if (modulesUnusedDependency[project.path] == null) {
+                                modulesUnusedDependency[project.path] = mutableSetOf()
+                            }
+                            modulesUnusedDependency[project.path]?.add(dependency.path)
                         }
-                        modulesUnusedDependencyWarning[project.path]?.add(dependency.path)
-                    } else {
-                        if (modulesUnusedDependency[project.path] == null) {
-                            modulesUnusedDependency[project.path] = mutableSetOf()
-                        }
-                        modulesUnusedDependency[project.path]?.add(dependency.path)
                     }
                 }
             }
+        }
+
+        if (useCaseAllowedImportedPackage.isNotEmpty()) {
+            val file = File(
+                graph.rootProject.projectDir.path + "/build",
+                "useCaseAllowedImportedPackage.txt",
+            )
+            file.parentFile.mkdirs()
+            file.delete()
+            file.writeText(useCaseAllowedImportedPackage.entries.joinToString { "${it.key} -> ${it.value}\n" })
+        }
+
+        if (moduleAllowedImportedModules.isNotEmpty()) {
+            val file = File(
+                graph.rootProject.projectDir.path + "/build",
+                "moduleAllowedImportedModules.txt",
+            )
+            file.parentFile.mkdirs()
+            file.delete()
+            file.writeText(moduleAllowedImportedModules.entries.joinToString { "${it.key} -> ${it.value}\n" })
         }
 
         if (modulesUnusedDependency.isNotEmpty()) {
@@ -86,28 +163,37 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
         }
     }
 
+    private fun getModuleByPackage(
+        packageName: String
+    ): ModuleProject? {
+        val module =  matchingPackageToModule.entries.find {
+            packageName.startsWith(it.key) || it.key.startsWith(packageName)
+        }
+        return module?.value
+    }
+
     private fun getMatchingModuleToPackage(
         graph: ParsedGraph,
-        result: MutableMap<String, MutableSet<String>>
+        result: MutableMap<ModuleProject, MutableSet<String>>
     ) {
         val androidProjects = graph.androidProjects
         val androidModulePaths = androidProjects.associate { it.path to it.namespace }
 
         var matchingModulesWithPackage = ""
-        graph.projects.forEach {
+        graph.projects.forEach { project ->
             val modulePackagesSet = mutableSetOf<String>()
-            if (it.path in androidModulePaths.keys) {
-                androidModulePaths[it.path]?.let { namespace ->
+            if (project.path in androidModulePaths.keys) {
+                androidModulePaths[project.path]?.let { namespace ->
                     modulePackagesSet.add(namespace)
                 }
             }
             getModulePackageName(
-                currentProject = it,
+                currentProject = project,
                 commonDirs = graph.commonDirs,
                 result = modulePackagesSet,
             )
-            matchingModulesWithPackage += "\n${it.path} - $modulePackagesSet"
-            result[it.path] = modulePackagesSet
+            matchingModulesWithPackage += "\n${project.path} - $modulePackagesSet"
+            result[project] = modulePackagesSet.sortedBy { it.length }.toMutableSet()
         }
 
         val file = File(graph.rootProject.projectDir.path + "/build", "matchingModulesWithPackage.txt")
@@ -146,6 +232,97 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
         return false
     }
 
+    private fun findUsedClassesOfUseCaseFile(
+        currentProject: ModuleProject,
+        useCaseName: String,
+        currentProjectPackage: String
+    ): List<FoundClass> {
+        val srcDirs = listOf(
+            "src/main/java",
+            "src/main/kotlin"
+        ).map { File(currentProject.projectDir, it) }.filter { it.exists() }
+
+        val findClassesRegex = Regex("""^import\s+([a-zA-Z0-9_.]+)\.model(s)?\.([A-Z][A-Za-z0-9_]*)$""")
+        val findDelegatesRegex = Regex("""^import\s+([a-zA-Z0-9_.]+)\.delegate\.([A-Z][A-Za-z0-9_]*)$""")
+
+        val result = mutableListOf<FoundClass>()
+
+        srcDirs.forEach { srcDir ->
+            srcDir.walkTopDown()
+                .filter {
+                    it.isFile && (it.extension == "kt") && it.name == "$useCaseName.kt"
+                }
+                .forEach { file ->
+                    file.forEachLine { line ->
+                        val matchClasses = findClassesRegex.find(line)
+                        val matchDelegates = findDelegatesRegex.find(line)
+                        if (matchClasses != null) {
+                            val packageName = matchClasses.groupValues[1]
+                            val className = matchClasses.groupValues[3]
+
+                            if (!packageName.startsWith(currentProjectPackage) || !currentProjectPackage.startsWith(packageName)) {
+                                result.add(FoundClass(className = className, packageName = packageName))
+                                val module = getModuleByPackage(packageName)
+                                if (module != null) {
+                                    val classResult = findImportsOfModelClassFile(
+                                        currentProject = module,
+                                        className = className,
+                                        currentProjectPackage = packageName
+                                    )
+                                    result.addAll(classResult)
+                                }
+                            }
+                        }
+                        if (matchDelegates != null) {
+                            val packageName = matchDelegates.groupValues[1]
+                            val className = matchDelegates.groupValues[3]
+                            result.add(FoundClass(packageName = packageName, className = className))
+                        }
+                    }
+                }
+        }
+        return result
+    }
+
+    private fun findImportsOfModelClassFile(
+        currentProject: ModuleProject,
+        className: String,
+        currentProjectPackage: String
+    ): List<FoundClass> {
+        val srcDirs = listOf(
+            "src/main/java",
+            "src/main/kotlin"
+        ).map { File(currentProject.projectDir, it) }.filter { it.exists() }
+
+        val findClassesRegex = Regex("""^import\s+([a-zA-Z0-9_.]+)\.model(s)?\.([A-Z][A-Za-z0-9_]*)$""")
+        val result = mutableListOf<FoundClass>()
+
+        srcDirs.forEach { srcDir ->
+            srcDir.walkTopDown()
+                .filter {
+                    it.isFile && (it.extension == "kt") && it.name == "$className.kt"
+                }
+                .forEach { file ->
+                    file.forEachLine { line ->
+                        val match = findClassesRegex.find(line)
+                        if (match != null) {
+                            val packageName = match.groupValues[1]
+                            val className1 = match.groupValues[3]
+                            if (!packageName.startsWith(currentProjectPackage) || !currentProjectPackage.startsWith(packageName)) {
+                                result.add(
+                                    FoundClass(
+                                        packageName = packageName,
+                                        className = className1
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+        }
+        return result
+    }
+
     private fun gatherDependencies(
         currentProject: ModuleProject,
         currentProjectAndDependencies: MutableList<ModuleProject>,
@@ -163,6 +340,41 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
             }
         return currentProjectAndDependencies
     }
+
+    private fun findUseCases(
+        currentProject: ModuleProject,
+    ): List<FoundClass> {
+        val srcDirs = listOf(
+            "src/main/java",
+            "src/main/kotlin"
+        ).map { File(currentProject.projectDir, it) }.filter { it.exists() }
+
+        val result = mutableListOf<FoundClass>()
+
+
+        val usedUseCasesRegex = Regex("""^\s*import\s+([a-zA-Z0-9_.]+)\.(\w*UseCase(?:Impl)?)""")
+
+        srcDirs.forEach { srcDir ->
+            srcDir.walkTopDown()
+                .filter { it.isFile && (it.extension == "kt") }
+                .forEach { file ->
+                    file.forEachLine { line ->
+                        val match = usedUseCasesRegex.find(line)
+                        if (match != null) {
+                            val packageName = match.groupValues[1]
+                            val className = match.groupValues[2]
+                            result.add(FoundClass(className = className, packageName = packageName))
+                        }
+                    }
+                }
+        }
+        return result
+    }
+
+    private data class FoundClass(
+        val className: String,
+        val packageName: String
+    )
 
     private fun getModulePackageName(
         currentProject: ModuleProject,

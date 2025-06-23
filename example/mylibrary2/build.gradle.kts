@@ -36,7 +36,8 @@ android {
 }
 
 dependencies {
-    implementation(project(path = ":example:mylibrary"))
+    implementation(project(path = ":example:models"))
+//    implementation(project(":example:domain"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.runner)
     androidTestImplementation(libs.espresso.core)
