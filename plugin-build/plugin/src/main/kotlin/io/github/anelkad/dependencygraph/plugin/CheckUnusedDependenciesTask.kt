@@ -27,6 +27,9 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
     @Internal
     val matchingPackageToModule: MutableMap<String, ModuleProject> = mutableMapOf()
 
+    @Internal
+    var logs = ""
+
     @TaskAction
     fun check() {
         val graph = parsedGraph.get()
@@ -69,19 +72,20 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
             )
             currentProjectDependencies.remove(project)
             if (searchInDepth.any { project.path.startsWith(it) }) {
-                println("searching in ${project.path}")
+                logs += "\nsearching in ${project.path}"
                 val foundUseCases = findUseCases(project)
                 foundUseCases.forEach { useCase ->
-                    println("in usecase $useCase")
+                    logs += "\n - in usecase $useCase"
                     val fromModule = matchingPackageToModule.entries.maxBy {
-                        it.key.commonPrefixWith(useCase.packageName).length
+                        it.key.plus('.').commonPrefixWith(useCase.packageName).length
                     }
-                    println("usecase from module ${fromModule?.value?.path}")
+                    logs += "\n - usecase from module ${fromModule?.value?.path}"
                     fromModule?.let { module ->
-                        val foundUsedModules = findUsedClassesOfUseCaseFile(
+                        val foundUsedModules = findUsedClassesOfFile(
                             currentProject = module.value,
                             useCaseName = useCase.className,
                             currentProjectPackage = module.key,
+                            searchDelegates = true
                         ).map { it.packageName }
                         if (useCaseAllowedImportedPackage[useCase.packageName + useCase.className] == null) {
                             useCaseAllowedImportedPackage[useCase.packageName + useCase.className] =
@@ -92,6 +96,38 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                         )
                     } ?: println("qwerty! $useCase not found!!")
                     useCaseAllowedImportedPackage[useCase.packageName + useCase.className]?.forEach { packageName ->
+                        if (moduleAllowedImportedModules[project.path] == null) {
+                            moduleAllowedImportedModules[project.path] = mutableSetOf()
+                        }
+                        val modulePath = getModuleByPackage(packageName)
+                        modulePath?.let {
+                            moduleAllowedImportedModules[project.path]?.add(it.path)
+                        }
+                    }
+                }
+                val baseClasses = findBaseClasses(project)
+                baseClasses.forEach { baseClass ->
+                    logs += "\n - in baseClass $baseClass"
+                    val fromModule = matchingPackageToModule.entries.maxBy {
+                        it.key.plus('.').commonPrefixWith(baseClass.packageName).length
+                    }
+                    logs += "\n - baseClass from module ${fromModule?.value?.path}"
+                    fromModule?.let { module ->
+                        val foundUsedModules = findUsedClassesOfFile(
+                            currentProject = module.value,
+                            useCaseName = baseClass.className,
+                            currentProjectPackage = module.key,
+                            searchDelegates = true
+                        ).map { it.packageName }
+                        if (useCaseAllowedImportedPackage[baseClass.packageName + baseClass.className] == null) {
+                            useCaseAllowedImportedPackage[baseClass.packageName + baseClass.className] =
+                                mutableSetOf()
+                        }
+                        useCaseAllowedImportedPackage[baseClass.packageName + baseClass.className]?.addAll(
+                            foundUsedModules,
+                        )
+                    } ?: println("qwerty! $baseClass not found!!")
+                    useCaseAllowedImportedPackage[baseClass.packageName + baseClass.className]?.forEach { packageName ->
                         if (moduleAllowedImportedModules[project.path] == null) {
                             moduleAllowedImportedModules[project.path] = mutableSetOf()
                         }
@@ -127,7 +163,7 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                     }
                 }
             }
-            println("----end-----")
+            logs += "\n----end-----"
         }
 
         if (useCaseAllowedImportedPackage.isNotEmpty()) {
@@ -150,6 +186,13 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
             file.writeText(moduleAllowedImportedModules.entries.joinToString { "${it.key} -> ${it.value}\n" })
         }
 
+        if (logs.isNotEmpty()) {
+            val file = File(graph.rootProject.projectDir.path + "/build", "logs.txt",)
+            file.parentFile.mkdirs()
+            file.delete()
+            file.writeText(logs)
+        }
+
         if (modulesUnusedDependency.isNotEmpty()) {
             throw GradleException(
                 "Modules with unused dependencies: \n${
@@ -169,7 +212,7 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
         packageName: String
     ): ModuleProject {
         val module = matchingPackageToModule.entries.maxBy {
-            packageName.commonPrefixWith(it.key).length
+            packageName.commonPrefixWith(it.key.plus(".")).length
         }
         return module.value
     }
@@ -234,10 +277,11 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
         return false
     }
 
-    private fun findUsedClassesOfUseCaseFile(
+    private fun findUsedClassesOfFile(
         currentProject: ModuleProject,
         useCaseName: String,
-        currentProjectPackage: String
+        currentProjectPackage: String,
+        searchDelegates: Boolean = true
     ): List<FoundClass> {
         val srcDirs = listOf(
             "src/main/java",
@@ -255,16 +299,16 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                     it.isFile && (it.extension == "kt") && it.name == "$useCaseName.kt"
                 }
                 .forEach { file ->
-                    println("found file $useCaseName.kt in $srcDir")
-                    println("currentProjectPackage $currentProjectPackage")
+                    logs += "\n --- found file $useCaseName.kt in $srcDir"
+                    logs += "\n --- currentProjectPackage $currentProjectPackage"
                     file.forEachLine { line ->
                         val matchClasses = findClassesRegex.find(line)
                         if (matchClasses != null) {
                             val packageName = matchClasses.groupValues[1]
                             val className = matchClasses.value.substringAfterLast(".")
-                            println("found model $className with package $packageName")
+                            logs += "\n --- found model $className with package $packageName"
 
-                            if (packageName.contains("$currentProjectPackage.")) {
+                            if (!packageName.startsWith("$currentProjectPackage.")) {
                                 result.add(FoundClass(className = className, packageName = packageName))
                                 val module = getModuleByPackage(packageName)
                                 val classResult = findImportsOfModelClassFile(
@@ -275,12 +319,19 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                                 result.addAll(classResult)
                             }
                         }
-                        val matchDelegates = findDelegatesRegex.find(line)
-                        if (matchDelegates != null) {
-                            val packageName = matchDelegates.groupValues[1]
-                            val className = matchDelegates.value.substringAfterLast(".")
-                            println("found delegate $className with package $packageName")
-                            result.add(FoundClass(packageName = packageName, className = className))
+                        if (searchDelegates) {
+                            val matchDelegates = findDelegatesRegex.find(line)
+                            if (matchDelegates != null) {
+                                val packageName = matchDelegates.groupValues[1]
+                                val className = matchDelegates.value.substringAfterLast(".")
+                                logs += "\n --- found delegate $className with package $packageName"
+                                result.add(
+                                    FoundClass(
+                                        packageName = packageName,
+                                        className = className
+                                    )
+                                )
+                            }
                         }
                     }
                 }
@@ -307,15 +358,15 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                     it.isFile && (it.extension == "kt") && it.name == "$className.kt"
                 }
                 .forEach { file ->
-                    println("found file $className.kt in $srcDir")
-                    println("currentProjectPackage $currentProjectPackage")
+                    logs += "\n --- found file $className.kt in $srcDir"
+                    logs += "\n --- currentProjectPackage $currentProjectPackage"
                     file.forEachLine { line ->
                         val match = findClassesRegex.find(line)
                         if (match != null) {
                             val packageName = match.groupValues[1]
                             val className1 = match.value.substringAfterLast(".")
-                            if (packageName.contains("$currentProjectPackage.")) {
-                                println("found model $className1 with package $packageName")
+                            if (!packageName.startsWith("$currentProjectPackage.")) {
+                                logs += "\n --- found model $className1 with package $packageName"
                                 result.add(
                                     FoundClass(
                                         packageName = packageName,
@@ -378,6 +429,35 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
         return result
     }
 
+    private fun findBaseClasses(
+        currentProject: ModuleProject,
+    ): List<FoundClass> {
+        val srcDirs = listOf(
+            "src/main/java",
+            "src/main/kotlin"
+        ).map { File(currentProject.projectDir, it) }.filter { it.exists() }
+
+        val result = mutableListOf<FoundClass>()
+
+        val baseClassRegex = Regex("""^import\s+([a-zA-Z0-9_.]*\.base\.[a-zA-Z0-9_.]*)\.([A-Z][A-Za-z0-9_]*)$""")
+
+        srcDirs.forEach { srcDir ->
+            srcDir.walkTopDown()
+                .filter { it.isFile && (it.extension == "kt") }
+                .forEach { file ->
+                    file.forEachLine { line ->
+                        val match = baseClassRegex.find(line)
+                        if (match != null) {
+                            val packageName = match.groupValues[1]
+                            val className = match.value.substringAfterLast('.')
+                            result.add(FoundClass(className = className, packageName = packageName))
+                        }
+                    }
+                }
+        }
+        return result
+    }
+
     private data class FoundClass(
         val className: String,
         val packageName: String
@@ -422,8 +502,8 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                         relativePath
                     }
                     .sortedBy { it.length }
-                    .first()
-                    .let {
+                    .firstOrNull()
+                    ?.let {
                         result.add(it)
                     }
             }
