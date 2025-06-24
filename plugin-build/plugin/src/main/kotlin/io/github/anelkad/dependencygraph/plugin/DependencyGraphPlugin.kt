@@ -83,7 +83,8 @@ abstract class DependencyGraphPlugin : Plugin<Project> {
                 parseDependencyGraph(
                     rootProject = project.rootProject,
                     ignoredModules = extension.ignoreModules.orNull ?: emptyList(),
-                    triggerModuleNames = extension.triggerModuleNames.orNull ?: emptyList()
+                    triggerModuleNames = extension.triggerModuleNames.orNull ?: emptyList(),
+                    graphModuleGroupNames = extension.graphModuleGroupNames.orNull ?: emptyList(),
                 ),
             )
         }

@@ -135,6 +135,7 @@ abstract class DependencyGraphGVTask : DefaultTask() {
             parsedGraph = graph,
             isRootGraph = true,
             triggerModuleNames = graph.triggerModuleNames,
+            graphModuleGroupNames = graph.graphModuleGroupNames,
             config = DrawConfig(
                 rootDir = graph.rootProject.projectDir,
                 moduleBaseUrl = moduleBaseUrl,
@@ -162,12 +163,6 @@ abstract class DependencyGraphGVTask : DefaultTask() {
         } else {
             "$repoUrl/blob/$branchName"
         }
-    }
-
-    private fun appendMarkDownIfNeeded(providedFileName: String) = when {
-        providedFileName.isBlank() -> DEFAULT_GRAPH_FILE_NAME
-        !providedFileName.endsWith(".md", ignoreCase = true) -> "$providedFileName.md"
-        else -> providedFileName
     }
 
     companion object {

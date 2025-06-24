@@ -12,6 +12,8 @@ dependencyGraphConfig {
     // Optional
     graphFileName.set("dependencyGraph.md")
 
+    graphModuleGroupNames.set(listOf(":example:theNewThing"))
+
     // Optional
     graphDirection.set(io.github.anelkad.dependencygraph.plugin.Direction.LeftToRight)
 
