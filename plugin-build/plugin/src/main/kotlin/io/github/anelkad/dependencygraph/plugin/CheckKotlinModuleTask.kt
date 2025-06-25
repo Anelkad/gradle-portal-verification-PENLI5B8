@@ -42,7 +42,7 @@ abstract class CheckKotlinModuleTask : DefaultTask() {
     fun check() {
         val graph = parsedGraph.get()
 
-        val androidProjects = graph.androidProjects.map {it.path}
+        val androidProjects = graph.androidProjects.map { it.path }
 
         val resultModulesStatus: MutableList<Pair<String, AndroidModuleStatus>> = mutableListOf()
 
@@ -134,13 +134,13 @@ abstract class CheckKotlinModuleTask : DefaultTask() {
         val dependencies: LinkedHashMap<DependencyPair, List<String>> =
             graph.dependencies
 
-        val androidProjects = graph.androidProjects
+        val androidProjects = graph.androidProjects.map { it.path }
         val currentProjectDependencies =
             gatherDependencies(mutableListOf(currentProject), dependencies)
 
         currentProjectDependencies.remove(currentProject)
 
-        val importedAndroidProjects = currentProjectDependencies.filter { it in androidProjects }
+        val importedAndroidProjects = currentProjectDependencies.filter { it.path in androidProjects }
         val ignoredExternalDependencies = graph.ignoredExternalDependencies
         val androidExternalDependencies = getExternalDependencies(
             currentProject = currentProject,
@@ -179,7 +179,6 @@ abstract class CheckKotlinModuleTask : DefaultTask() {
                 AndroidModuleStatus.StrictUseAndroid
             }
             else -> {
-                println(5)
                 logs += "\n${currentProject.path} has android dependencies can be kotlin if change its dependencies"
                 AndroidModuleStatus.HasAndroidDependency(
                     importedAndroidProjects.map {
