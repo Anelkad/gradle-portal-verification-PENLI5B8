@@ -191,7 +191,7 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
         }
 
         if (logs.isNotEmpty()) {
-            val file = File(graph.rootProject.projectDir.path + "/build", "logs.txt",)
+            val file = File(graph.rootProject.projectDir.path + "/build", "checkUnusedDependenciesLogs.txt",)
             file.parentFile.mkdirs()
             file.delete()
             file.writeText(logs)
