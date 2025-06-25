@@ -73,7 +73,13 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
             currentProjectDependencies.remove(project)
             if (searchInDepth.any { project.path.startsWith(it) }) {
                 logs += "\nsearching in ${project.path}"
-                val foundUseCases = findUseCases(project)
+                val foundUseCases = mutableListOf<FoundClass>()
+                val foundBaseClasses = mutableListOf<FoundClass>()
+                findUseCasesAndBaseClasses(
+                    currentProject = project,
+                    useCases = foundUseCases,
+                    baseClasses = foundBaseClasses
+                )
                 foundUseCases.forEach { useCase ->
                     logs += "\n - in usecase $useCase"
                     val fromModule = matchingPackageToModule.entries.maxBy {
@@ -84,8 +90,7 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                         val foundUsedModules = findUsedClassesOfFile(
                             currentProject = module.value,
                             useCaseName = useCase.className,
-                            currentProjectPackage = module.key,
-                            searchDelegates = true
+                            currentProjectPackage = module.key
                         ).map { it.packageName }
                         if (useCaseAllowedImportedPackage[useCase.packageName + useCase.className] == null) {
                             useCaseAllowedImportedPackage[useCase.packageName + useCase.className] =
@@ -105,8 +110,7 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                         }
                     }
                 }
-                val baseClasses = findBaseClasses(project)
-                baseClasses.forEach { baseClass ->
+                foundBaseClasses.forEach { baseClass ->
                     logs += "\n - in baseClass $baseClass"
                     val fromModule = matchingPackageToModule.entries.maxBy {
                         it.key.plus('.').commonPrefixWith(baseClass.packageName).length
@@ -117,7 +121,7 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                             currentProject = module.value,
                             useCaseName = baseClass.className,
                             currentProjectPackage = module.key,
-                            searchDelegates = true
+                            allowCurrentProject = true
                         ).map { it.packageName }
                         if (useCaseAllowedImportedPackage[baseClass.packageName + baseClass.className] == null) {
                             useCaseAllowedImportedPackage[baseClass.packageName + baseClass.className] =
@@ -281,7 +285,7 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
         currentProject: ModuleProject,
         useCaseName: String,
         currentProjectPackage: String,
-        searchDelegates: Boolean = true
+        allowCurrentProject: Boolean = false
     ): List<FoundClass> {
         val srcDirs = listOf(
             "src/main/java",
@@ -301,14 +305,15 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                 .forEach { file ->
                     logs += "\n --- found file $useCaseName.kt in $srcDir"
                     logs += "\n --- currentProjectPackage $currentProjectPackage"
+                    logs += "\n --- allowCurrentProject = $allowCurrentProject"
                     file.forEachLine { line ->
                         val matchClasses = findClassesRegex.find(line)
                         if (matchClasses != null) {
                             val packageName = matchClasses.groupValues[1]
                             val className = matchClasses.value.substringAfterLast(".")
-                            logs += "\n --- found model $className with package $packageName"
 
-                            if (!packageName.startsWith("$currentProjectPackage.")) {
+                            if (allowCurrentProject || !packageName.startsWith("$currentProjectPackage.")) {
+                                logs += "\n --- found model $className with package $packageName"
                                 result.add(FoundClass(className = className, packageName = packageName))
                                 val module = getModuleByPackage(packageName)
                                 val classResult = findImportsOfModelClassFile(
@@ -319,19 +324,17 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                                 result.addAll(classResult)
                             }
                         }
-                        if (searchDelegates) {
-                            val matchDelegates = findDelegatesRegex.find(line)
-                            if (matchDelegates != null) {
-                                val packageName = matchDelegates.groupValues[1]
-                                val className = matchDelegates.value.substringAfterLast(".")
-                                logs += "\n --- found delegate $className with package $packageName"
-                                result.add(
-                                    FoundClass(
-                                        packageName = packageName,
-                                        className = className
-                                    )
-                                )
-                            }
+                        val matchDelegates = findDelegatesRegex.find(line)
+                        if (matchDelegates != null) {
+                            val packageName = matchDelegates.groupValues[1]
+                            val className = matchDelegates.value.substringAfterLast(".")
+                            logs += "\n --- found delegate $className with package $packageName"
+                            result.add(
+                                FoundClass(
+                                    packageName = packageName,
+                                    className = className,
+                                ),
+                            )
                         }
                     }
                 }
@@ -358,15 +361,15 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                     it.isFile && (it.extension == "kt") && it.name == "$className.kt"
                 }
                 .forEach { file ->
-                    logs += "\n --- found file $className.kt in $srcDir"
-                    logs += "\n --- currentProjectPackage $currentProjectPackage"
+                    logs += "\n ---- found file $className.kt in $srcDir"
+                    logs += "\n ---- currentProjectPackage $currentProjectPackage"
                     file.forEachLine { line ->
                         val match = findClassesRegex.find(line)
                         if (match != null) {
                             val packageName = match.groupValues[1]
                             val className1 = match.value.substringAfterLast(".")
                             if (!packageName.startsWith("$currentProjectPackage.")) {
-                                logs += "\n --- found model $className1 with package $packageName"
+                                logs += "\n ---- found model $className1 with package $packageName"
                                 result.add(
                                     FoundClass(
                                         packageName = packageName,
@@ -399,46 +402,17 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
         return currentProjectAndDependencies
     }
 
-    private fun findUseCases(
+    private fun findUseCasesAndBaseClasses(
         currentProject: ModuleProject,
-    ): List<FoundClass> {
+        useCases: MutableList<FoundClass>,
+        baseClasses: MutableList<FoundClass>
+    ) {
         val srcDirs = listOf(
             "src/main/java",
             "src/main/kotlin"
         ).map { File(currentProject.projectDir, it) }.filter { it.exists() }
-
-        val result = mutableListOf<FoundClass>()
-
 
         val usedUseCasesRegex = Regex("""^\s*import\s+([a-zA-Z0-9_.]+)\.(\w*UseCase(?:Impl)?)""")
-
-        srcDirs.forEach { srcDir ->
-            srcDir.walkTopDown()
-                .filter { it.isFile && (it.extension == "kt") }
-                .forEach { file ->
-                    file.forEachLine { line ->
-                        val match = usedUseCasesRegex.find(line)
-                        if (match != null) {
-                            val packageName = match.groupValues[1]
-                            val className = match.groupValues[2]
-                            result.add(FoundClass(className = className, packageName = packageName))
-                        }
-                    }
-                }
-        }
-        return result
-    }
-
-    private fun findBaseClasses(
-        currentProject: ModuleProject,
-    ): List<FoundClass> {
-        val srcDirs = listOf(
-            "src/main/java",
-            "src/main/kotlin"
-        ).map { File(currentProject.projectDir, it) }.filter { it.exists() }
-
-        val result = mutableListOf<FoundClass>()
-
         val baseClassRegex = Regex("""^import\s+([a-zA-Z0-9_.]*\.base\.[a-zA-Z0-9_.]*)\.([A-Z][A-Za-z0-9_]*)$""")
 
         srcDirs.forEach { srcDir ->
@@ -446,16 +420,21 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                 .filter { it.isFile && (it.extension == "kt") }
                 .forEach { file ->
                     file.forEachLine { line ->
-                        val match = baseClassRegex.find(line)
-                        if (match != null) {
-                            val packageName = match.groupValues[1]
-                            val className = match.value.substringAfterLast('.')
-                            result.add(FoundClass(className = className, packageName = packageName))
+                        val matchUseCase = usedUseCasesRegex.find(line)
+                        if (matchUseCase != null) {
+                            val packageName = matchUseCase.groupValues[1]
+                            val className = matchUseCase.groupValues[2]
+                            useCases.add(FoundClass(className = className, packageName = packageName))
+                        }
+                        val matchBaseClass = baseClassRegex.find(line)
+                        if (matchBaseClass != null) {
+                            val packageName = matchBaseClass.groupValues[1]
+                            val className = matchBaseClass.value.substringAfterLast('.')
+                            baseClasses.add(FoundClass(className = className, packageName = packageName))
                         }
                     }
                 }
         }
-        return result
     }
 
     private data class FoundClass(
@@ -500,9 +479,7 @@ abstract class CheckUnusedDependenciesTask : DefaultTask() {
                             }
                         }
                         relativePath
-                    }
-                    .sortedBy { it.length }
-                    .firstOrNull()
+                    }.minByOrNull { it.length }
                     ?.let {
                         result.add(it)
                     }
