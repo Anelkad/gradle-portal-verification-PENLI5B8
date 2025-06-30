@@ -1,34 +1,66 @@
-# Gradle dependency graph visualisation plugin
+# Android Gradle Graph Plugin
+creator is @anel-kadyrova
 
-A **Gradle Plugin** that generates dependency graphs showing the relationship between modules in your project.
+### Многофункциональный плагин [io.github.anelkad.dependencygraph](https://plugins.gradle.org/plugin/io.github.anelkad.dependencygraph) создан чтобы мониторить зависимости проекта
 
-The plugin generates a graph visualising the dependencies across the whole project. It also generates sub-graphs for each module within the project. For projects with a large number of modules, I find the sub-graphs tend to be a lot more useful.
+все проверки происходят в stage `linter` CI/CD
 
-The graphs are generated in the [`mermaid.js`](https://mermaid.js.org/syntax/flowchart.html#direction-in-subgraphs) format so they are automatically displayed by Github.
+### Основные таски:
+1. `./gradlew checkUnusedDependencies --no-configuration-cache` - проверка на неиспользуемые зависимости в модулях
+2. `./gradlew checkKotlinModule --no-configuration-cache` - проверка на отсутвие андроид зависимостей модуля и возможности переделать на котлин модуль
+3. `./gradlew checkUnusedResources --no-configuration-cache` - проверка на неиспользуемые ресурсы в андроид модуле чтобы отключить генерацию ресурсов
+4. `./gradlew dependencyMetrics --no-configuration-cache` - генерит json файл в graph_metrics с метриками связности (dependencies/dependents)
+5. `./gradlew dependencyGraph --no-configuration-cache` - генерить .gv формат графа в build папке
 
-### Using the plugin
+### Настройка работы плагина
 
-The plugin adds a new Gradle task - `dependencyGraph`. Running the task will generate the dependency graphs for all modules in the project.
-
-```bash
-./gradlew dependencyGraph
-```
-
-### Configuring the plugin
-
-Optionally **configure the plugin** in the same `build.gradle.kts` if you want to change the defaults
 ```kotlin
 dependencyGraphConfig {
-    graphDirection.set(Direction.LeftToRight)
-
-    showLegend.set(ShowLegend.OnlyInRootGraph)
-
-    ignoreModules.set(listOf(":example:system-test", ":example:test-fixtures"))
-
-    repoRootUrl.set("https://github.com/anelkad/Gradle-dependency-graphs")
-
-    mainBranchName.set("main")
-
-    graphFileName.set("dependencyGraph.md")
+    ignoreModules.set(listOf(":libs:onefit-ktlint-rules"))
+    ignoreExternalDependencies.set(listOf("androidx.annotation", "com.google.dagger", "androidx.compose"))
+    triggerModuleNames.set(listOf(":models", ":components", ":common", ":api", ":impl"))
+    commonDirs.set(
+        listOf(
+            "di",
+            "ui",
+            "data",
+            "domain",
+            "model",
+            "base",
+        ),
+    )
+    modulesDependencyToWarning.set(
+        listOf(":libs:analytics") // ksp inject in BaseFragment
+    )
+    searchInDepth.set(listOf(":feature", ":plugin"))
+    graphModuleGroupNames.set(listOf(":services"))
 }
 ```
+
+Описание экстеншенов:
+- `ignoreModules` - модули которые игнорируются плагином
+- `ignoreExternalDependencies` - юзается в checkKotlinModule, внешние зависимости которые не считаются как андроид зависимость
+- `triggerModuleNames` - в dependencyGraph, в графе закрашиваются в разные цвета модули по группам из triggerModuleNames
+- `commonDirs` - в checkUnusedDependencies чтобы определить module package
+- `modulesDependencyToWarning` - в checkUnusedDependencies не фейлит таску этих зависимостей
+- `searchInDepth` - в checkUnusedDependencies смотрит в глубину зависимостей по делегатам/model/base классам из группы модулей в списке
+- `graphModuleGroupNames` - в dependencyGraph генерит граф только выделенной группе
+
+Генерируемые логи:
+- `checkKotlinModule`
+    - root/build/resultModulesStatus.txt - список модулей с их статусами (StrictUseAndroid, HasAndroidDependency, CanBeKotlinModule, CanBeKotlinModuleWithNoParcelize)
+    - root/build/checkKotlinModuleLogs.txt - логи
+- `checkUnusedDependencies`
+    - root/build/matchingModulesWithPackage.txt - список соответствия модуля с package + namespace
+    - root/build/matchingPackageToModule.txt - список соответствия package c модулем
+    - root/build/checkUnusedDependenciesLogs.txt - логи
+    - root/build/useCaseAllowedImportedPackage.txt - список юз кейсов и разрешаемых ими импортов (которые будут игнорироваться как неиспользуемые)
+    - root/build/moduleAllowedImportedModules.txt - список модулей и разрешаемые зависимости модулей (которые игнорируются скриптом)
+- `checkUnusedResources`
+    - module/build/usingResourcesInFiles.txt - выводятся строки где юзается ресурс
+- `dependencyMetrics`
+    - root/build/sorted_dependents_in_depths.json - отсортированный список dependents_in_depths
+    - root/build/sorted_dependencies_in_depths.json - отсортированный список dependencies_in_depths
+    - root/build/sorted_projects_centrality.txt - отсортированный список у которых обе метрики высокие (dependents/dependencies)
+- `dependencyGraph`
+    - root/build/dependency_graph.gv - файл графа зависимостей проекта
