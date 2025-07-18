@@ -10,7 +10,7 @@ creator is @anel-kadyrova
 2. `./gradlew checkKotlinModule --no-configuration-cache` - проверка на отсутвие андроид зависимостей модуля и возможности переделать на котлин модуль
 3. `./gradlew checkUnusedResources --no-configuration-cache` - проверка на неиспользуемые ресурсы в андроид модуле чтобы отключить генерацию ресурсов
 4. `./gradlew dependencyMetrics --no-configuration-cache` - генерит json файл в graph_metrics с метриками связности (dependencies/dependents)
-5. `./gradlew dependencyGraph --no-configuration-cache` - генерить .gv формат графа в build папке
+5. `./gradlew dependencyGraph --no-configuration-cache` - генерит .gv формат графа в build папке
 
 ### Настройка работы плагина
 
@@ -41,8 +41,8 @@ dependencyGraphConfig {
 - `ignoreModules` - модули которые игнорируются плагином
 - `ignoreExternalDependencies` - юзается в checkKotlinModule, внешние зависимости которые не считаются как андроид зависимость
 - `triggerModuleNames` - в dependencyGraph, в графе закрашиваются в разные цвета модули по группам из triggerModuleNames
-- `commonDirs` - в checkUnusedDependencies чтобы определить module package
-- `modulesDependencyToWarning` - в checkUnusedDependencies не фейлит таску этих зависимостей
+- `commonDirs` - в checkUnusedDependencies чтобы определить package модуля по директориям
+- `modulesDependencyToWarning` - в checkUnusedDependencies не фейлит таску зависимостей из списка
 - `searchInDepth` - в checkUnusedDependencies смотрит в глубину зависимостей по делегатам/model/base классам из группы модулей в списке
 - `graphModuleGroupNames` - в dependencyGraph генерит граф только выделенной группе
 
