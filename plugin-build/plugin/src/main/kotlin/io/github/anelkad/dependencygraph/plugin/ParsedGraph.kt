@@ -11,6 +11,9 @@ internal data class ParsedGraph(
     val triggerModuleNames: List<String> = emptyList(),
     val graphModuleGroupNames: List<String> = emptyList(),
     val androidProjectsEnabledResources: List<ModuleProject> = emptyList(),
+    val commonDirs: List<String> = emptyList(),
+    val searchInDepth: List<String> = emptyList(),
+    val modulesDependencyToWarning: List<String> = emptyList(),
     val multiplatformProjects: List<ModuleProject>,
     val androidProjects: List<ModuleProject>,
     val javaProjects: List<ModuleProject>,
@@ -28,9 +31,19 @@ internal data class ExternalDependencyPair(
     val target: String,
 )
 
-internal data class ModuleProject(
+data class ModuleProject(
     val path: String,
     val projectDir: File,
+    val namespace: String? = null
 )
 
-internal fun Project.asModuleProject() = ModuleProject(this.path, this.projectDir)
+internal fun Project.asModuleProject() = ModuleProject(
+    path = this.path,
+    projectDir = this.projectDir
+)
+
+internal fun Project.asModuleProject(namespace: String) = ModuleProject(
+    path = this.path,
+    projectDir = this.projectDir,
+    namespace = namespace
+)

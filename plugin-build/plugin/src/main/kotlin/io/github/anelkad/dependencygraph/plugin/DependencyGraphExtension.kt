@@ -20,7 +20,13 @@ abstract class DependencyGraphExtension @Inject constructor(project: Project) {
 
     val ignoreExternalDependencies: ListProperty<String> = objects.listProperty(String::class.java)
 
+    val commonDirs: ListProperty<String> = objects.listProperty(String::class.java)
+
+    val modulesDependencyToWarning: ListProperty<String> = objects.listProperty(String::class.java)
+
     val triggerModuleNames: ListProperty<String> = objects.listProperty(String::class.java)
+
+    val searchInDepth: ListProperty<String> = objects.listProperty(String::class.java)
 
     val graphModuleGroupNames: ListProperty<String> = objects.listProperty(String::class.java)
 

@@ -12,7 +12,7 @@ import java.io.File
 abstract class CheckUnusedResourcesTask : DefaultTask() {
     init {
         group = BasePlugin.BUILD_GROUP
-        description = "Generates dependency metrics files for all local modules in the project."
+        description = "Checks if there are modules where resources are not used."
     }
 
     /** The project dependencies graph as [ParsedGraph]`. */
@@ -26,11 +26,11 @@ abstract class CheckUnusedResourcesTask : DefaultTask() {
     @TaskAction
     fun check() {
         val graph = parsedGraph.get()
-        val androidProjects = graph.androidProjectsEnabledResources
+        val androidProjects = graph.androidProjectsEnabledResources.map { it.path }
 
         val modulesWithUnusedResources = mutableListOf<String>()
         graph.projects.forEach {
-            if (it in androidProjects) {
+            if (it.path in androidProjects) {
                 if (checkIfResourcesUnused(it)) {
                     modulesWithUnusedResources.add(it.path)
                 }

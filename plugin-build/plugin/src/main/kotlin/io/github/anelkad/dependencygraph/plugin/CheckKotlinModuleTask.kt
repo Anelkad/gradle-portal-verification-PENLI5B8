@@ -35,16 +35,19 @@ abstract class CheckKotlinModuleTask : DefaultTask() {
     @Internal
     val modulesListCanBeKotlin = mutableMapOf<String, Boolean>()
 
+    @Internal
+    var logs = ""
+
     @TaskAction
     fun check() {
         val graph = parsedGraph.get()
 
-        val androidProjects = graph.androidProjects
+        val androidProjects = graph.androidProjects.map { it.path }
 
         val resultModulesStatus: MutableList<Pair<String, AndroidModuleStatus>> = mutableListOf()
 
         graph.projects.forEach {
-            if (it in androidProjects) {
+            if (it.path in androidProjects) {
                 resultModulesStatus.add(
                     checkIfDependenciesContainsAndroidModules(
                         graph = graph,
@@ -89,9 +92,16 @@ abstract class CheckKotlinModuleTask : DefaultTask() {
                     project.logger.warn("⚠️ ${it.key} has android dependencies can be kotlin if change its dependencies")
                 }
             }
+
+        if (logs.isNotEmpty()) {
+            val file = File(graph.rootProject.projectDir.path + "/build", "checkKotlinModuleLogs.txt",)
+            file.parentFile.mkdirs()
+            file.delete()
+            file.writeText(logs)
+        }
     }
 
-    fun canBeKotlinModule(pair: Pair<String, AndroidModuleStatus>): Boolean {
+    private fun canBeKotlinModule(pair: Pair<String, AndroidModuleStatus>): Boolean {
         val moduleName = pair.first
         val currentStatus = pair.second
 
@@ -124,13 +134,13 @@ abstract class CheckKotlinModuleTask : DefaultTask() {
         val dependencies: LinkedHashMap<DependencyPair, List<String>> =
             graph.dependencies
 
-        val androidProjects = graph.androidProjects
+        val androidProjects = graph.androidProjects.map { it.path }
         val currentProjectDependencies =
             gatherDependencies(mutableListOf(currentProject), dependencies)
 
         currentProjectDependencies.remove(currentProject)
 
-        val importedAndroidProjects = currentProjectDependencies.filter { it in androidProjects }
+        val importedAndroidProjects = currentProjectDependencies.filter { it.path in androidProjects }
         val ignoredExternalDependencies = graph.ignoredExternalDependencies
         val androidExternalDependencies = getExternalDependencies(
             currentProject = currentProject,
@@ -152,24 +162,24 @@ abstract class CheckKotlinModuleTask : DefaultTask() {
 
         val status: AndroidModuleStatus = when {
             hasAndroidResources || androidExternalDependencies.isNotEmpty() -> {
-//                println("currentProject: ${currentProject.path} is strict use android")
-//                println(currentProject.path +" androidExternalDependencies: " + androidExternalDependencies)
+                logs += "\ncurrentProject: ${currentProject.path} is strict use android"
+                logs += "\n${currentProject.path}" +" androidExternalDependencies: " + androidExternalDependencies
                 AndroidModuleStatus.StrictUseAndroid
             }
             importedAndroidProjects.isEmpty() && androidImports.isEmpty() -> {
-//                project.logger.warn("⚠️ ${currentProject.path} not contains android dependencies, make it kotlin module!")
+                logs += "\n${currentProject.path} not contains android dependencies, make it kotlin module!"
                 AndroidModuleStatus.CanBeKotlinModule
             }
             importedAndroidProjects.isEmpty() && containsOnlyParcelableImports && androidImports.isNotEmpty() -> {
-//                project.logger.warn("⚠️ ${currentProject.path} could be kotlin module if no parcelize use")
+                logs += "\n${currentProject.path} could be kotlin module if no parcelize use"
                 AndroidModuleStatus.CanBeKotlinModuleWithNoParcelize
             }
             androidImports.isNotEmpty() && !containsOnlyParcelableImports  -> {
-//                println(currentProject.path +" androidImports: " + androidImports)
+                logs += "\n${currentProject.path}" + " androidImports: " + androidImports
                 AndroidModuleStatus.StrictUseAndroid
             }
             else -> {
-//                project.logger.warn("⚠️ ${currentProject.path} has android dependencies can be kotlin if change its dependencies")
+                logs += "\n${currentProject.path} has android dependencies can be kotlin if change its dependencies"
                 AndroidModuleStatus.HasAndroidDependency(
                     importedAndroidProjects.map {
                         checkIfDependenciesContainsAndroidModules(

@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.mylibrary"
+    namespace = "com.run.ceeee"
     compileSdk = 35
 
     defaultConfig {
@@ -34,6 +34,8 @@ android {
 
 dependencies {
     implementation(project(path = ":example:models"))
+    implementation(project(path = ":example:mylibrary2"))
+//    implementation(project(":example:domain"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.runner)
     androidTestImplementation(libs.espresso.core)

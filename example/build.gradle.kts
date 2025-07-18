@@ -14,6 +14,26 @@ dependencyGraphConfig {
 
     graphModuleGroupNames.set(listOf(":example:theNewThing"))
 
+    commonDirs.set(
+        listOf(
+            "di",
+            "ui",
+            "data",
+            "domain",
+            "model",
+        ),
+    )
+
+    searchInDepth.set(
+        listOf(":example")
+    )
+
+    modulesDependencyToWarning.set(
+        listOf(
+//            ":example:models",
+        )
+    )
+
     // Optional
     graphDirection.set(io.github.anelkad.dependencygraph.plugin.Direction.LeftToRight)
 

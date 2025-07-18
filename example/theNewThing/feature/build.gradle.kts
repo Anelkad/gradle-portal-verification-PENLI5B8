@@ -3,6 +3,6 @@ plugins {
 }
 
 dependencies {
-    implementation(project(path = ":example:theNewThing:ui"))
-    implementation(project(path = ":example:theNewThing:domain"))
+//    implementation(project(path = ":example:theNewThing:ui"))
+//    implementation(project(path = ":example:theNewThing:domain"))
 }
